@@ -1,6 +1,7 @@
 import HeroBanner from './HeroBanner';
 import { useDispatch, useSelector } from 'react-redux';
 import { useEffect } from 'react';
+import { FaExclamationTriangle } from 'react-icons/fa';
 import { fetchProducts } from '../../store/actions';
 import ProductCard from '../shared/ProductCard';
 import Loader from '../shared/Loader';
@@ -24,7 +25,7 @@ const Home = () => {
 
       <div className='py-5'>
         <div className='flex flex-col justify-center items-center space-y-2'>
-          <h1 className='text-slate-800 text-4x1 font-bold'>Products</h1>
+          <h1 className='text-slate-800 text-4xl font-bold'>Products</h1>
           <span className='text-slate-700'>
             Discover our handpicked selection of top rated items just for you!
             </span>

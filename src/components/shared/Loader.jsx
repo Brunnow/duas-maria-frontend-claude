@@ -1,7 +1,7 @@
 import { RotatingLines } from "react-loader-spinner";
 const Loader = ({ text }) => {
   return (
-    <div className="flex justify-center items-center w-full h-[450]">
+    <div className="flex justify-center items-center w-full h-[450px]">
       <div className="flex flex-col items-center gap-4">
         <RotatingLines
           visible={true}

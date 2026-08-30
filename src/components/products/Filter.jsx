@@ -1,6 +1,6 @@
 
 import { FiArrowDown, FiArrowUp, FiRefreshCcw, FiSearch } from "react-icons/fi";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { FormControl, InputLabel, Select, MenuItem, Tooltip, Button } from "@mui/material";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 const Filter = ({categories}) => {
