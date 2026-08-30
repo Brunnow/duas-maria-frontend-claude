@@ -156,6 +156,6 @@ src/
 | Carrinho (`features/cart`, `CartDrawer`, `/carrinho`, por variante) | ✅ concluído — validado ao vivo                            |
 | Conta (`/conta`: perfil + endereços CRUD via `features/address`)    | ✅ concluído — validado ao vivo                            |
 | Pedidos (`/pedidos`)                                                | ⚠️ placeholder — API não expõe leitura de pedidos          |
-| Checkout                                                            | ⏳ próxima (pagamento mock)                                |
-| Administração                                                       | ⬜ pendente                                                |
+| Checkout (`/checkout`: endereço → pagamento simulado → revisão)     | ✅ concluído — validado ao vivo                            |
+| Administração                                                       | ⏳ próxima                                                 |
 | SEO / performance / testes (auditoria)                              | ⬜ pendente                                                |
