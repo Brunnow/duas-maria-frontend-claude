@@ -154,7 +154,8 @@ src/
 | Página de produto (`pages/Produto`, `/produtos/:id`)                | ✅ concluído — validado ao vivo                            |
 | Autenticação (`features/auth`, `/login`, `/cadastro`, cookie JWT)   | ✅ concluído — validado ao vivo                            |
 | Carrinho (`features/cart`, `CartDrawer`, `/carrinho`, por variante) | ✅ concluído — validado ao vivo                            |
-| Conta / Pedidos                                                     | ⏳ próxima (backend: leitura de pedidos)                   |
-| Checkout                                                            | ⬜ pendente (pagamento mock)                               |
+| Conta (`/conta`: perfil + endereços CRUD via `features/address`)    | ✅ concluído — validado ao vivo                            |
+| Pedidos (`/pedidos`)                                                | ⚠️ placeholder — API não expõe leitura de pedidos          |
+| Checkout                                                            | ⏳ próxima (pagamento mock)                                |
 | Administração                                                       | ⬜ pendente                                                |
 | SEO / performance / testes (auditoria)                              | ⬜ pendente                                                |
