@@ -128,25 +128,29 @@ src/
 
 - Adicionar bibliotecas **apenas quando a etapa realmente precisar**, uma de cada vez.
 - Não substituir tecnologia existente sem necessidade real (ver `CLAUDE.md`).
-- Material UI é removido **gradualmente**, à medida que as primitivas de
-  `components/ui/` cobrem cada caso.
+- Material UI e Emotion **já foram removidos** (na fase Catálogo): as
+  primitivas de `components/ui/` cobrem os casos. A base de overlays
+  (`Modal`, `Drawer`) usa Headless UI.
+- Adicionadas até aqui: `prettier`, `vitest` + `@testing-library/*` +
+  `jsdom`, `clsx` + `tailwind-merge`. Removidas: `@mui/material`,
+  `@emotion/*`, `react-loader-spinner`.
 
 ---
 
 ## Estado da migração
 
-| Área                                                              | Situação                                                    |
-| ----------------------------------------------------------------- | ----------------------------------------------------------- |
-| Tooling (Prettier, alias, Vitest, `.env.example`)                 | ✅ concluído                                                |
-| Correção de bugs bloqueantes                                      | ✅ concluído                                                |
-| Design System (tokens, fontes, primitivas `ui/`)                  | ✅ fundação concluída (`shared/` evolui com Home/Catálogo)  |
-| Layout global (`Header`, `Footer`, `MobileMenu`, rota de layout)  | ✅ concluído                                                |
-| Home (`Hero` estático + destaques + `ProductCard`/`ProductGrid`)  | ✅ concluído                                                |
-| Catálogo (`pages/Catalogo`, `features/product`, unificar filtros) | ⏳ próxima                                                  |
-| Página de produto                                                 | ⬜ pendente (depende do backend: GET individual, variações) |
-| Autenticação                                                      | ⬜ pendente (verificar CORS/`withCredentials`)              |
-| Carrinho                                                          | ⬜ pendente (usar endpoints do backend)                     |
-| Conta / Pedidos                                                   | ⬜ pendente (backend: leitura de pedidos)                   |
-| Checkout                                                          | ⬜ pendente (pagamento mock)                                |
-| Administração                                                     | ⬜ pendente                                                 |
-| SEO / performance / testes (auditoria)                            | ⬜ pendente                                                 |
+| Área                                                               | Situação                                                   |
+| ------------------------------------------------------------------ | ---------------------------------------------------------- |
+| Tooling (Prettier, alias, Vitest, `.env.example`)                  | ✅ concluído                                               |
+| Correção de bugs bloqueantes                                       | ✅ concluído                                               |
+| Design System (tokens, fontes, primitivas `ui/`)                   | ✅ fundação concluída (`shared/` evolui com Home/Catálogo) |
+| Layout global (`Header`, `Footer`, `MobileMenu`, rota de layout)   | ✅ concluído                                               |
+| Home (`Hero` estático + destaques + `ProductCard`/`ProductGrid`)   | ✅ concluído                                               |
+| Catálogo (`pages/Catalogo`, `useCatalog` unifica filtros, sidebar) | ✅ concluído (MUI removido; `lint` limpo)                  |
+| Página de produto                                                  | ⏳ próxima (depende do backend: GET individual, variações) |
+| Autenticação                                                       | ⬜ pendente (verificar CORS/`withCredentials`)             |
+| Carrinho                                                           | ⬜ pendente (usar endpoints do backend)                    |
+| Conta / Pedidos                                                    | ⬜ pendente (backend: leitura de pedidos)                  |
+| Checkout                                                           | ⬜ pendente (pagamento mock)                               |
+| Administração                                                      | ⬜ pendente                                                |
+| SEO / performance / testes (auditoria)                             | ⬜ pendente                                                |
