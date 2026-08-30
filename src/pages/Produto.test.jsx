@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { authenticatedAuth, anonymousAuth, makeStore } from '@/test/renderWithProviders';
 
 vi.mock('@/services/productService', () => ({
   getProduct: vi.fn(),
@@ -26,13 +28,16 @@ const product = {
   stock: 7,
 };
 
-const renderAt = (id) =>
+const renderAt = (id, { auth = authenticatedAuth } = {}) =>
   render(
-    <MemoryRouter initialEntries={[`/produtos/${id}`]}>
-      <Routes>
-        <Route path="/produtos/:id" element={<Produto />} />
-      </Routes>
-    </MemoryRouter>,
+    <Provider store={makeStore(auth)}>
+      <MemoryRouter initialEntries={[`/produtos/${id}`]}>
+        <Routes>
+          <Route path="/produtos/:id" element={<Produto />} />
+          <Route path="/login" element={<div>Tela de login</div>} />
+        </Routes>
+      </MemoryRouter>
+    </Provider>,
   );
 
 beforeEach(() => {
@@ -64,7 +69,7 @@ describe('Produto (PDP)', () => {
     expect(await screen.findByText('Produto não encontrado')).toBeInTheDocument();
   });
 
-  it('adiciona ao carrinho usando o variantId (produto sem grade)', async () => {
+  it('logado: adiciona ao carrinho usando o variantId (produto sem grade)', async () => {
     getProduct.mockResolvedValue(product);
     getProductVariants.mockResolvedValue([
       { variantId: 55, size: 'Único', stock: 5, inStock: true },
@@ -80,7 +85,22 @@ describe('Produto (PDP)', () => {
     expect(await screen.findByText('Produto adicionado ao carrinho.')).toBeInTheDocument();
   });
 
-  it('convida a entrar quando o carrinho responde 401', async () => {
+  it('deslogado: clicar em adicionar leva para /login sem chamar a API', async () => {
+    getProduct.mockResolvedValue(product);
+    getProductVariants.mockResolvedValue([
+      { variantId: 55, size: 'Único', stock: 5, inStock: true },
+    ]);
+
+    renderAt(7, { auth: anonymousAuth });
+
+    const addButton = await screen.findByRole('button', { name: 'Adicionar ao carrinho' });
+    addButton.click();
+
+    expect(await screen.findByText('Tela de login')).toBeInTheDocument();
+    expect(addVariantToCart).not.toHaveBeenCalled();
+  });
+
+  it('logado: 401 do carrinho redireciona para /login', async () => {
     getProduct.mockResolvedValue(product);
     getProductVariants.mockResolvedValue([
       { variantId: 55, size: 'Único', stock: 5, inStock: true },
@@ -92,6 +112,6 @@ describe('Produto (PDP)', () => {
     const addButton = await screen.findByRole('button', { name: 'Adicionar ao carrinho' });
     addButton.click();
 
-    expect(await screen.findByText(/entre na sua conta/i)).toBeInTheDocument();
+    expect(await screen.findByText('Tela de login')).toBeInTheDocument();
   });
 });

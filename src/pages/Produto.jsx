@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { FiMinus, FiPlus } from 'react-icons/fi';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
@@ -9,6 +10,7 @@ import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import ProductGallery from '@/components/product/ProductGallery';
 import SizeSelector from '@/components/product/SizeSelector';
+import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import { useProduct } from '@/hooks/useProduct';
 import { addVariantToCart } from '@/services/cartService';
 import { cn } from '@/lib/cn';
@@ -34,6 +36,9 @@ function ProdutoSkeleton() {
 
 export default function Produto() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isAuthenticated = useSelector(selectIsAuthenticated);
   const { status, product, variants, error, reload } = useProduct(id);
 
   const [selectedVariantId, setSelectedVariantId] = useState(null);
@@ -58,8 +63,18 @@ export default function Produto() {
     setFeedback(null);
   };
 
+  const goToLogin = () =>
+    navigate('/login', {
+      state: { from: location, message: 'Entre para adicionar itens ao carrinho.' },
+    });
+
   const handleAdd = async () => {
     if (!selectedVariant || !selectedVariant.inStock) return;
+    // Sem sessao: leva ao login preservando a rota (a intencao de compra).
+    if (!isAuthenticated) {
+      goToLogin();
+      return;
+    }
     setAdding(true);
     setFeedback(null);
     try {
@@ -68,7 +83,7 @@ export default function Produto() {
     } catch (err) {
       const code = err?.response?.status;
       if (code === 401 || code === 403) {
-        setFeedback({ tone: 'info', message: 'Entre na sua conta para adicionar ao carrinho.' });
+        goToLogin();
       } else {
         setFeedback({
           tone: 'error',
@@ -217,7 +232,6 @@ export default function Produto() {
                     'text-sm',
                     feedback.tone === 'success' && 'text-success',
                     feedback.tone === 'error' && 'text-danger',
-                    feedback.tone === 'info' && 'text-foreground',
                   )}
                 >
                   {feedback.message}
