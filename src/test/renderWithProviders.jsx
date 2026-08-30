@@ -4,11 +4,12 @@ import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import authReducer from '@/features/auth/authSlice';
 import cartReducer from '@/features/cart/cartSlice';
+import addressReducer from '@/features/address/addressSlice';
 
-/** Store minima para testes (auth + cart). */
+/** Store minima para testes (auth + cart + address). */
 export function makeStore(preloadedState) {
   return configureStore({
-    reducer: { auth: authReducer, cart: cartReducer },
+    reducer: { auth: authReducer, cart: cartReducer, address: addressReducer },
     preloadedState,
   });
 }

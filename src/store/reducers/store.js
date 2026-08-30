@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import authReducer from '@/features/auth/authSlice';
 import cartReducer from '@/features/cart/cartSlice';
+import addressReducer from '@/features/address/addressSlice';
 import { ProductReducer } from './ProductReducer';
 import { errorReducer } from './errorReducer';
 
@@ -11,6 +12,7 @@ export const store = configureStore({
     errors: errorReducer,
     auth: authReducer,
     cart: cartReducer,
+    address: addressReducer,
   },
   preloadedState: {},
 });

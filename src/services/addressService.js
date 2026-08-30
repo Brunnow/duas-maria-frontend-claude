@@ -1,0 +1,27 @@
+import api from '@/api/api';
+
+/*
+ * Enderecos do usuario. Contratos reais (AddressController, exige auth):
+ *   GET    /api/users/addresses      -> AddressDTO[]  (do usuario logado)
+ *   POST   /api/addresses            -> AddressDTO
+ *   PUT    /api/addresses/{id}       -> AddressDTO
+ *   DELETE /api/addresses/{id}       -> string
+ *
+ * AddressDTO = { addressId, street, buildingName, city, state, country, pincode }
+ */
+
+export function getUserAddresses() {
+  return api.get('/users/addresses').then((response) => response.data);
+}
+
+export function createAddress(address) {
+  return api.post('/addresses', address).then((response) => response.data);
+}
+
+export function updateAddress(addressId, address) {
+  return api.put(`/addresses/${addressId}`, address).then((response) => response.data);
+}
+
+export function deleteAddress(addressId) {
+  return api.delete(`/addresses/${addressId}`).then((response) => response.data);
+}
