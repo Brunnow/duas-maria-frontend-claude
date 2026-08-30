@@ -3,11 +3,12 @@ import { render } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import authReducer from '@/features/auth/authSlice';
+import cartReducer from '@/features/cart/cartSlice';
 
-/** Store minima para testes (so o slice de auth). */
+/** Store minima para testes (auth + cart). */
 export function makeStore(preloadedState) {
   return configureStore({
-    reducer: { auth: authReducer },
+    reducer: { auth: authReducer, cart: cartReducer },
     preloadedState,
   });
 }
@@ -21,6 +22,21 @@ export const authenticatedAuth = {
     status: 'authenticated',
   },
 };
+
+/** Estado de carrinho com N itens para os testes. */
+export function cartState(items = [], overrides = {}) {
+  return {
+    cart: {
+      cartId: 1,
+      items,
+      totalPrice: items.reduce((sum, it) => sum + (it.lineTotal || 0), 0),
+      status: 'ready',
+      drawerOpen: false,
+      opError: null,
+      ...overrides,
+    },
+  };
+}
 
 /**
  * Renderiza `ui` dentro de <Provider> + <MemoryRouter>.
