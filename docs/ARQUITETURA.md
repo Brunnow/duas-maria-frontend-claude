@@ -141,8 +141,8 @@ src/
 | Correção de bugs bloqueantes                                      | ✅ concluído                                                |
 | Design System (tokens, fontes, primitivas `ui/`)                  | ✅ fundação concluída (`shared/` evolui com Home/Catálogo)  |
 | Layout global (`Header`, `Footer`, `MobileMenu`, rota de layout)  | ✅ concluído                                                |
-| Home                                                              | ⏳ próxima                                                  |
-| Catálogo (`pages/Catalogo`, `features/product`, unificar filtros) | ⬜ pendente                                                 |
+| Home (`Hero` estático + destaques + `ProductCard`/`ProductGrid`)  | ✅ concluído                                                |
+| Catálogo (`pages/Catalogo`, `features/product`, unificar filtros) | ⏳ próxima                                                  |
 | Página de produto                                                 | ⬜ pendente (depende do backend: GET individual, variações) |
 | Autenticação                                                      | ⬜ pendente (verificar CORS/`withCredentials`)              |
 | Carrinho                                                          | ⬜ pendente (usar endpoints do backend)                     |
