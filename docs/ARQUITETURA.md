@@ -143,18 +143,18 @@ src/
 
 ## Estado da migração
 
-| Área                                                               | Situação                                                   |
-| ------------------------------------------------------------------ | ---------------------------------------------------------- |
-| Tooling (Prettier, alias, Vitest, `.env.example`)                  | ✅ concluído                                               |
-| Correção de bugs bloqueantes                                       | ✅ concluído                                               |
-| Design System (tokens, fontes, primitivas `ui/`)                   | ✅ fundação concluída (`shared/` evolui com Home/Catálogo) |
-| Layout global (`Header`, `Footer`, `MobileMenu`, rota de layout)   | ✅ concluído                                               |
-| Home (`Hero` estático + destaques + `ProductCard`/`ProductGrid`)   | ✅ concluído                                               |
-| Catálogo (`pages/Catalogo`, `useCatalog` unifica filtros, sidebar) | ✅ concluído (MUI removido; `lint` limpo)                  |
-| Página de produto (`pages/Produto`, `/produtos/:id`)               | ✅ código concluído — E2E pendente (reiniciar backend)     |
-| Autenticação (`features/auth`, `/login`, `/cadastro`, cookie JWT)  | ✅ código concluído — E2E pendente (reiniciar backend)     |
-| Carrinho                                                           | ⏳ próxima (usar endpoints do backend; exige auth)         |
-| Conta / Pedidos                                                    | ⬜ pendente (backend: leitura de pedidos)                  |
-| Checkout                                                           | ⬜ pendente (pagamento mock)                               |
-| Administração                                                      | ⬜ pendente                                                |
-| SEO / performance / testes (auditoria)                             | ⬜ pendente                                                |
+| Área                                                                | Situação                                                   |
+| ------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Tooling (Prettier, alias, Vitest, `.env.example`)                   | ✅ concluído                                               |
+| Correção de bugs bloqueantes                                        | ✅ concluído                                               |
+| Design System (tokens, fontes, primitivas `ui/`)                    | ✅ fundação concluída (`shared/` evolui com Home/Catálogo) |
+| Layout global (`Header`, `Footer`, `MobileMenu`, rota de layout)    | ✅ concluído                                               |
+| Home (`Hero` estático + destaques + `ProductCard`/`ProductGrid`)    | ✅ concluído                                               |
+| Catálogo (`pages/Catalogo`, `useCatalog` unifica filtros, sidebar)  | ✅ concluído (MUI removido; `lint` limpo)                  |
+| Página de produto (`pages/Produto`, `/produtos/:id`)                | ✅ concluído — validado ao vivo                            |
+| Autenticação (`features/auth`, `/login`, `/cadastro`, cookie JWT)   | ✅ concluído — validado ao vivo                            |
+| Carrinho (`features/cart`, `CartDrawer`, `/carrinho`, por variante) | ✅ concluído — validado ao vivo                            |
+| Conta / Pedidos                                                     | ⏳ próxima (backend: leitura de pedidos)                   |
+| Checkout                                                            | ⬜ pendente (pagamento mock)                               |
+| Administração                                                       | ⬜ pendente                                                |
+| SEO / performance / testes (auditoria)                              | ⬜ pendente                                                |
