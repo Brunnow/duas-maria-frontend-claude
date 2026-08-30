@@ -40,6 +40,13 @@ export default function UserMenu({ username }) {
         </MenuItem>
         <MenuItem>
           {({ focus }) => (
+            <button type="button" onClick={() => navigate('/pedidos')} className={itemClass(focus)}>
+              Meus pedidos
+            </button>
+          )}
+        </MenuItem>
+        <MenuItem>
+          {({ focus }) => (
             <button
               type="button"
               onClick={handleLogout}

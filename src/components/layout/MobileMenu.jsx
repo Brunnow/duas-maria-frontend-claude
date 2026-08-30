@@ -31,6 +31,9 @@ export default function MobileMenu({ open, onClose, nav, auth }) {
               <NavLink to="/conta" onClick={onClose} className={linkClass}>
                 Minha conta
               </NavLink>
+              <NavLink to="/pedidos" onClick={onClose} className={linkClass}>
+                Meus pedidos
+              </NavLink>
               <button
                 type="button"
                 onClick={() => {

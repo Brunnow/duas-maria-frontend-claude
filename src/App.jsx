@@ -9,10 +9,13 @@ import Produto from '@/pages/Produto';
 import Login from '@/pages/Login';
 import Cadastro from '@/pages/Cadastro';
 import Carrinho from '@/pages/Carrinho';
+import Conta from '@/pages/Conta';
+import Pedidos from '@/pages/Pedidos';
 import NotFound from '@/pages/NotFound';
 import ProtectedRoute from '@/routes/ProtectedRoute';
 import { bootstrapSession, selectIsAuthenticated, sessionExpired } from '@/features/auth/authSlice';
 import { clearCart, fetchCart } from '@/features/cart/cartSlice';
+import { clearAddresses } from '@/features/address/addressSlice';
 
 function App() {
   const dispatch = useDispatch();
@@ -23,10 +26,14 @@ function App() {
     return onUnauthorized(() => dispatch(sessionExpired()));
   }, [dispatch]);
 
-  // O carrinho vive no backend: carrega ao autenticar, limpa ao sair.
+  // Dados por usuario (carrinho, enderecos): carregam ao autenticar, limpam ao sair.
   useEffect(() => {
-    if (isAuthenticated) dispatch(fetchCart());
-    else dispatch(clearCart());
+    if (isAuthenticated) {
+      dispatch(fetchCart());
+    } else {
+      dispatch(clearCart());
+      dispatch(clearAddresses());
+    }
   }, [isAuthenticated, dispatch]);
 
   return (
@@ -40,6 +47,8 @@ function App() {
           <Route path="/cadastro" element={<Cadastro />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/carrinho" element={<Carrinho />} />
+            <Route path="/conta" element={<Conta />} />
+            <Route path="/pedidos" element={<Pedidos />} />
           </Route>
           {/* Rota antiga em ingles -> redireciona para a versao pt-BR */}
           <Route path="/products" element={<Navigate to="/produtos" replace />} />
