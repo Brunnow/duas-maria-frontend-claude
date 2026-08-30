@@ -13,10 +13,8 @@ export default defineConfig({
     },
   },
   test: {
-    // Ambiente 'node' por enquanto (apenas testes de funcoes puras).
-    // jsdom + @testing-library serao adicionados na fase de Design System,
-    // quando o primeiro teste de componente for necessario.
-    environment: 'node',
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
     include: ['src/**/*.{test,spec}.{js,jsx}'],
   },
 });
