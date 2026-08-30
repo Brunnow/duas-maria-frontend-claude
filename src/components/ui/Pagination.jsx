@@ -1,22 +1,6 @@
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { cn } from '@/lib/cn';
-
-const GAP = '…';
-
-/** Monta a lista de paginas visiveis: 1, ultima, atual +/-1 e reticencias. */
-export function buildPages(page, total) {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-
-  const wanted = [1, 2, total - 1, total, page - 1, page, page + 1];
-  const shown = [...new Set(wanted)].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
-
-  const result = [];
-  shown.forEach((p, i) => {
-    if (i > 0 && p - shown[i - 1] > 1) result.push(GAP);
-    result.push(p);
-  });
-  return result;
-}
+import { PAGE_GAP, pageRange } from '@/lib/pageRange';
 
 /** Paginacao numerica com anterior/proximo. Nao renderiza nada se ha <= 1 pagina. */
 export default function Pagination({ page, totalPages, onChange, className }) {
@@ -39,10 +23,10 @@ export default function Pagination({ page, totalPages, onChange, className }) {
         <span className="hidden sm:inline">Anterior</span>
       </button>
 
-      {buildPages(page, totalPages).map((item, i) =>
-        item === GAP ? (
+      {pageRange(page, totalPages).map((item, i) =>
+        item === PAGE_GAP ? (
           <span key={`gap-${i}`} className="px-2 text-muted" aria-hidden="true">
-            {GAP}
+            {PAGE_GAP}
           </span>
         ) : (
           <button

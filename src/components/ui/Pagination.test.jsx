@@ -1,16 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import Pagination, { buildPages } from './Pagination';
-
-describe('buildPages', () => {
-  it('lista todas as paginas quando sao poucas', () => {
-    expect(buildPages(1, 5)).toEqual([1, 2, 3, 4, 5]);
-  });
-
-  it('insere reticencias em torno da pagina atual', () => {
-    expect(buildPages(6, 12)).toEqual([1, 2, '…', 5, 6, 7, '…', 11, 12]);
-  });
-});
+import Pagination from './Pagination';
 
 describe('Pagination', () => {
   it('nao renderiza com uma unica pagina', () => {
@@ -24,5 +14,10 @@ describe('Pagination', () => {
     expect(screen.getByRole('button', { name: 'Página anterior' })).toBeDisabled();
     screen.getByRole('button', { name: '3' }).click();
     expect(onChange).toHaveBeenCalledWith(3);
+  });
+
+  it('marca a pagina atual com aria-current', () => {
+    render(<Pagination page={2} totalPages={5} onChange={() => {}} />);
+    expect(screen.getByRole('button', { name: '2' })).toHaveAttribute('aria-current', 'page');
   });
 });
