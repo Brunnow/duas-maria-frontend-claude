@@ -1,8 +1,8 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { FiUser } from 'react-icons/fi';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { logout } from '@/features/auth/authSlice';
+import { logout, selectAuth } from '@/features/auth/authSlice';
 import { cn } from '@/lib/cn';
 
 const itemClass = (focus, tone = 'text-foreground') =>
@@ -12,6 +12,8 @@ const itemClass = (focus, tone = 'text-foreground') =>
 export default function UserMenu({ username }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { roles } = useSelector(selectAuth);
+  const isAdmin = roles.includes('ROLE_ADMIN');
 
   const handleLogout = async () => {
     await dispatch(logout());
@@ -45,6 +47,15 @@ export default function UserMenu({ username }) {
             </button>
           )}
         </MenuItem>
+        {isAdmin && (
+          <MenuItem>
+            {({ focus }) => (
+              <button type="button" onClick={() => navigate('/admin')} className={itemClass(focus)}>
+                Administração
+              </button>
+            )}
+          </MenuItem>
+        )}
         <MenuItem>
           {({ focus }) => (
             <button

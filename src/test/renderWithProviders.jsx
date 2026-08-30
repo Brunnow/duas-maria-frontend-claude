@@ -5,11 +5,19 @@ import { MemoryRouter } from 'react-router-dom';
 import authReducer from '@/features/auth/authSlice';
 import cartReducer from '@/features/cart/cartSlice';
 import addressReducer from '@/features/address/addressSlice';
+import { ProductReducer } from '@/store/reducers/ProductReducer';
+import { errorReducer } from '@/store/reducers/errorReducer';
 
-/** Store minima para testes (auth + cart + address). */
+/** Store minima para testes (auth + cart + address + products/errors legados). */
 export function makeStore(preloadedState) {
   return configureStore({
-    reducer: { auth: authReducer, cart: cartReducer, address: addressReducer },
+    reducer: {
+      auth: authReducer,
+      cart: cartReducer,
+      address: addressReducer,
+      products: ProductReducer,
+      errors: errorReducer,
+    },
     preloadedState,
   });
 }
@@ -20,6 +28,13 @@ export const authenticatedAuth = {
   auth: {
     user: { id: 1, username: 'maria', roles: ['ROLE_USER'] },
     roles: ['ROLE_USER'],
+    status: 'authenticated',
+  },
+};
+export const adminAuth = {
+  auth: {
+    user: { id: 3, username: 'admin', roles: ['ROLE_ADMIN', 'ROLE_USER'] },
+    roles: ['ROLE_ADMIN', 'ROLE_USER'],
     status: 'authenticated',
   },
 };

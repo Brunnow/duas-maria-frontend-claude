@@ -13,7 +13,13 @@ import Checkout from '@/pages/Checkout';
 import Conta from '@/pages/Conta';
 import Pedidos from '@/pages/Pedidos';
 import NotFound from '@/pages/NotFound';
+import AdminLayout from '@/components/admin/AdminLayout';
+import AdminHome from '@/pages/admin/AdminHome';
+import AdminProdutos from '@/pages/admin/AdminProdutos';
+import AdminCategorias from '@/pages/admin/AdminCategorias';
+import AdminEstoque from '@/pages/admin/AdminEstoque';
 import ProtectedRoute from '@/routes/ProtectedRoute';
+import AdminRoute from '@/routes/AdminRoute';
 import { bootstrapSession, selectIsAuthenticated, sessionExpired } from '@/features/auth/authSlice';
 import { clearCart, fetchCart } from '@/features/cart/cartSlice';
 import { clearAddresses } from '@/features/address/addressSlice';
@@ -51,6 +57,14 @@ function App() {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/conta" element={<Conta />} />
             <Route path="/pedidos" element={<Pedidos />} />
+          </Route>
+          <Route path="/admin" element={<AdminRoute />}>
+            <Route element={<AdminLayout />}>
+              <Route index element={<AdminHome />} />
+              <Route path="produtos" element={<AdminProdutos />} />
+              <Route path="categorias" element={<AdminCategorias />} />
+              <Route path="estoque" element={<AdminEstoque />} />
+            </Route>
           </Route>
           {/* Rota antiga em ingles -> redireciona para a versao pt-BR */}
           <Route path="/products" element={<Navigate to="/produtos" replace />} />
