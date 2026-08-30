@@ -69,7 +69,7 @@ src/
 │   ├── authService.js
 │   └── ...
 │
-├── hooks/                 # hooks reutilizáveis (useProductFilter, ...)
+├── hooks/                 # hooks reutilizáveis (useCatalog, useProduct, ...)
 ├── lib/                   # utilidades puras (format, cn, persist)
 └── api/
     └── api.js             # instância única do Axios (ponto central)
@@ -147,8 +147,8 @@ src/
 | Layout global (`Header`, `Footer`, `MobileMenu`, rota de layout)   | ✅ concluído                                               |
 | Home (`Hero` estático + destaques + `ProductCard`/`ProductGrid`)   | ✅ concluído                                               |
 | Catálogo (`pages/Catalogo`, `useCatalog` unifica filtros, sidebar) | ✅ concluído (MUI removido; `lint` limpo)                  |
-| Página de produto                                                  | ⏳ próxima (depende do backend: GET individual, variações) |
-| Autenticação                                                       | ⬜ pendente (verificar CORS/`withCredentials`)             |
+| Página de produto (`pages/Produto`, `/produtos/:id`)               | ✅ código concluído — E2E pendente (reiniciar backend)     |
+| Autenticação                                                       | ⏳ próxima (verificar CORS/`withCredentials`)              |
 | Carrinho                                                           | ⬜ pendente (usar endpoints do backend)                    |
 | Conta / Pedidos                                                    | ⬜ pendente (backend: leitura de pedidos)                  |
 | Checkout                                                           | ⬜ pendente (pagamento mock)                               |
