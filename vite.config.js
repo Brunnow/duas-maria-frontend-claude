@@ -16,5 +16,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.js'],
     include: ['src/**/*.{test,spec}.{js,jsx}'],
+    // jsdom + workers em paralelo no Windows crasham de forma intermitente
+    // ("Worker exited unexpectedly"); rodar os arquivos em sequencia estabiliza.
+    fileParallelism: false,
   },
 });

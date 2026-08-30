@@ -1,12 +1,16 @@
-import HeroBanner from './HeroBanner';
-import { useDispatch, useSelector } from 'react-redux';
 import { useEffect } from 'react';
-import { FaExclamationTriangle } from 'react-icons/fa';
-import { fetchProducts } from '../../store/actions';
-import ProductCard from '../shared/ProductCard';
-import Loader from '../shared/Loader';
+import { useDispatch, useSelector } from 'react-redux';
+import Container from '@/components/ui/Container';
+import EmptyState from '@/components/shared/EmptyState';
+import ErrorState from '@/components/shared/ErrorState';
+import ProductGrid from '@/components/shared/ProductGrid';
+import ProductGridSkeleton from '@/components/shared/ProductGridSkeleton';
+import { fetchProducts } from '@/store/actions';
+import Hero from './Hero';
 
-const Home = () => {
+const FEATURED_COUNT = 8;
+
+export default function Home() {
   const dispatch = useDispatch();
   const { products } = useSelector((state) => state.products);
   const { isLoading, errorMessage } = useSelector((state) => state.errors);
@@ -15,35 +19,33 @@ const Home = () => {
     dispatch(fetchProducts());
   }, [dispatch]);
 
-  return (
-    <div className="lg:px-14 sm:px-8 px-4">
-      <div className="py-6">
-        <HeroBanner />
-      </div>
+  const featured = Array.isArray(products) ? products.slice(0, FEATURED_COUNT) : [];
 
-      <div className="py-5">
-        <div className="flex flex-col justify-center items-center space-y-2">
-          <h1 className="text-slate-800 text-4xl font-bold">Products</h1>
-          <span className="text-slate-700">
-            Discover our handpicked selection of top rated items just for you!
-          </span>
+  return (
+    <>
+      <Hero />
+
+      <Container as="section" className="py-16 lg:py-20">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <h2 className="font-display text-3xl text-foreground">Peças em destaque</h2>
+          <p className="text-sm text-muted">Uma seleção do que chegou por último.</p>
         </div>
 
-        {isLoading ? (
-          <Loader />
-        ) : errorMessage ? (
-          <div className="flex justify-center items-center h-[200px]">
-            <FaExclamationTriangle className="text-slate-800 text-3xl mr-2 " />
-            <span className="text-slate-800 text-lg font-medium">{errorMessage}</span>
-          </div>
-        ) : (
-          <div className="pb-6 pt-14 grid 2xl:grid-cols-4 lg:grid-cols-3 sm:grid-cols-2 gap-y-6 gap-x-6">
-            {products && products?.slice(0, 4).map((item, i) => <ProductCard key={i} {...item} />)}
-          </div>
-        )}
-      </div>
-    </div>
+        <div className="mt-10">
+          {isLoading ? (
+            <ProductGridSkeleton count={FEATURED_COUNT} />
+          ) : errorMessage ? (
+            <ErrorState message={errorMessage} />
+          ) : featured.length === 0 ? (
+            <EmptyState
+              title="Nenhum produto por aqui ainda"
+              description="Volte em breve para ver as novidades."
+            />
+          ) : (
+            <ProductGrid products={featured} />
+          )}
+        </div>
+      </Container>
+    </>
   );
-};
-
-export default Home;
+}

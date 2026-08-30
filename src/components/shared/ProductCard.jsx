@@ -1,109 +1,96 @@
 import { useState } from 'react';
-import { FaShoppingBag } from 'react-icons/fa';
+import { FiShoppingBag } from 'react-icons/fi';
+import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
+import Price from '@/components/ui/Price';
+import { truncateText } from '@/components/utils/truncateText';
+import { discountPercent } from '@/lib/format';
 import ProductViewModal from './ProductViewModal';
-import { truncateText } from '../utils/truncateText';
 
-const ProductCard = ({
+/**
+ * Card de produto — orientado a imagem. Abre o quick view ao clicar na
+ * imagem ou no nome. O botao "Adicionar" sera ligado ao carrinho na
+ * fase de Carrinho.
+ */
+export default function ProductCard({
   productId,
   productName,
   image,
   description,
   quantity,
   price,
-  discount,
   specialPrice,
-}) => {
-  const [openProductViewModal, setOpenProductViewModal] = useState(false);
-  const bntLoader = false;
-  const [selectedViewProduct, setSelectedViewProduct] = useState('');
+}) {
+  const [open, setOpen] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
-  const isAvailable = quantity && Number(quantity) > 0;
-  const handleProductView = (product) => {
-    setSelectedViewProduct(product);
-    setOpenProductViewModal(true);
-  };
+  const inStock = Number(quantity) > 0;
+  const pct = discountPercent(price, specialPrice);
+  const product = { id: productId, productName, image, description, price, specialPrice };
 
   return (
-    <div className="border rounded-lg shadow-xl overflow-hidden transition-shadow duration-300">
-      <div
-        onClick={() => {
-          handleProductView({
-            id: productId,
-            productName,
-            image,
-            description,
-            quantity,
-            price,
-            discount,
-            specialPrice,
-          });
-        }}
-        className="w-full overflow-hidden aspect-[3/2] "
-      >
-        <img
-          className="w-full h-full cursor-pointer transition-transform duration-300 transform hover:scale-105 "
-          src={image}
-          alt={productName}
-        ></img>
-      </div>
-      <div className="px-4">
-        <h2
-          onClick={() => {
-            handleProductView({
-              id: productId,
-              productName,
-              image,
-              description,
-              quantity,
-              price,
-              discount,
-              specialPrice,
-            });
-          }}
-          className="text-lg font-semibold mb-2 cursor-pointer"
+    <div className="group flex flex-col">
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={`Ver detalhes de ${productName}`}
+          className="block aspect-[3/4] w-full overflow-hidden rounded-card bg-subtle"
         >
-          {truncateText(productName, 30)}
-        </h2>
-        <div className="min-h-20 max-h-20">
-          <p className="text-gray-600 text-sm">{truncateText(description, 80)}</p>
-        </div>
-
-        <div className="flex items-center justify-between">
-          {specialPrice ? (
-            <div className="flex flex-col">
-              <span className="text-gray-400 line-through">${Number(price).toFixed(2)}</span>
-              <span className="text-xl font-bold text-slate-700">
-                ${Number(specialPrice).toFixed(2)}
-              </span>
-            </div>
+          {image && !imgError ? (
+            <img
+              src={image}
+              alt={productName}
+              loading="lazy"
+              onError={() => setImgError(true)}
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
           ) : (
-            <span className="text-xl font-bold text-slate-700">
-              {'  '}${Number(price).toFixed(2)}
+            <span className="flex h-full w-full items-center justify-center text-xs text-muted">
+              sem imagem
             </span>
           )}
+        </button>
 
+        {pct != null && (
+          <Badge tone="accent" className="absolute left-3 top-3">
+            -{pct}%
+          </Badge>
+        )}
+        {!inStock && (
+          <Badge tone="neutral" className="absolute right-3 top-3">
+            Esgotado
+          </Badge>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-1 flex-col gap-2">
+        <h3 className="text-sm text-foreground">
           <button
-            disabled={!isAvailable || bntLoader}
-            onClick={() => {}}
-            className={`${
-              isAvailable
-                ? 'bg-blue-500 hover:bg-blue-600 opacity-100'
-                : 'bg-gray-400 opacity-70 cursor-not-allowed'
-            } text-white py-2 px-3 rounded-lg flex items-center justify-center w-36 transition-colors duration-300`}
+            type="button"
+            onClick={() => setOpen(true)}
+            className="text-left transition-colors hover:text-accent"
           >
-            <FaShoppingBag className="mr-2 text-lg" />
-            <span>{isAvailable ? 'Adicionar' : 'Sem Estoque'}</span>
+            {truncateText(productName, 60)}
           </button>
+        </h3>
+
+        <Price price={price} specialPrice={specialPrice} className="text-sm" />
+
+        <div className="mt-auto pt-2">
+          <Button variant="secondary" size="sm" className="w-full" disabled={!inStock}>
+            <FiShoppingBag size={16} />
+            {inStock ? 'Adicionar' : 'Indisponível'}
+          </Button>
         </div>
       </div>
+
       <ProductViewModal
-        open={openProductViewModal}
-        setOpen={setOpenProductViewModal}
-        product={selectedViewProduct}
-        isAvailable={isAvailable}
+        open={open}
+        onClose={() => setOpen(false)}
+        product={product}
+        inStock={inStock}
       />
     </div>
   );
-};
-
-export default ProductCard;
+}
