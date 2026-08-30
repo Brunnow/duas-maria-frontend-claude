@@ -35,9 +35,12 @@ export const fetchCart = createAsyncThunk('cart/fetch', async (_, { rejectWithVa
     return await cartService.getCart();
   } catch (err) {
     const status = err?.response?.status;
-    // Usuario logado que ainda nao tem carrinho: o backend responde 404/500.
-    if (status === 404 || status === 500) return { cartId: null, items: [], totalPrice: 0 };
-    return rejectWithValue(status === 401 ? 'unauthorized' : 'error');
+    // Usuario logado que ainda nao tem carrinho: o backend responde 404/500
+    // e, por um NPE nao tratado, as vezes 401. Nenhum desses derruba a sessao.
+    if (status === 401 || status === 404 || status === 500) {
+      return { cartId: null, items: [], totalPrice: 0 };
+    }
+    return rejectWithValue('error');
   }
 });
 

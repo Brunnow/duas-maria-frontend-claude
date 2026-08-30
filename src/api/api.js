@@ -19,10 +19,19 @@ export function onUnauthorized(handler) {
   return () => unauthorizedHandlers.delete(handler);
 }
 
+/*
+ * Endpoints que podem responder 401 por motivos que NAO sao "sessao
+ * expirou" — o backend mascara alguns 500 (ex.: usuario sem carrinho)
+ * como 401. Um 401 nesses caminhos nao deve derrubar a sessao.
+ */
+const SESSION_NEUTRAL_401 = ['/carts/users/cart', '/auth/user'];
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error?.response?.status === 401) {
+    const url = error?.config?.url || '';
+    const neutral = SESSION_NEUTRAL_401.some((path) => url.includes(path));
+    if (error?.response?.status === 401 && !neutral) {
       unauthorizedHandlers.forEach((handler) => handler(error));
     }
     return Promise.reject(error);

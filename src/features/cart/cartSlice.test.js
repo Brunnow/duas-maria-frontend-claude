@@ -62,12 +62,14 @@ describe('cartSlice reducers', () => {
 });
 
 describe('cartSlice thunks', () => {
-  it('fetchCart: 404 (usuario sem carrinho) resolve como carrinho vazio', async () => {
-    cartService.getCart.mockRejectedValue({ response: { status: 404 } });
-    const store = makeStore();
-    await store.dispatch(fetchCart());
-    expect(store.getState().cart.items).toEqual([]);
-    expect(store.getState().cart.status).toBe('ready');
+  it('fetchCart: 404/401 (usuario sem carrinho) resolve como carrinho vazio', async () => {
+    for (const code of [404, 401, 500]) {
+      cartService.getCart.mockRejectedValue({ response: { status: code } });
+      const store = makeStore();
+      await store.dispatch(fetchCart());
+      expect(store.getState().cart.items).toEqual([]);
+      expect(store.getState().cart.status).toBe('ready');
+    }
   });
 
   it('addToCart: sucesso aplica o CartDTO, prefixa a imagem e conta os itens', async () => {
