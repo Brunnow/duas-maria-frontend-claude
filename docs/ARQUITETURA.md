@@ -112,10 +112,14 @@ src/
 
 ### API
 
-- Uma única instância do Axios em `src/api/api.js`.
+- Uma única instância do Axios em `src/api/api.js`, com `withCredentials: true`
+  (autenticação por **cookie JWT** — nada em `localStorage`).
+- `api.js` expõe `onUnauthorized(handler)`; em `401` o `authSlice` marca a
+  sessão como expirada (`sessionExpired`).
 - Nenhuma URL de API espalhada pelo código — sempre via `services/`.
 - Configuração por variável de ambiente (`VITE_BACK_END_URL`).
-- Requisições autenticadas usarão `withCredentials: true` (cookie/JWT do backend).
+- O CORS do backend libera `http://localhost:5173` com credenciais — o dev
+  precisa rodar o Vite nessa porta (padrão).
 
 ### Design System
 
@@ -148,8 +152,8 @@ src/
 | Home (`Hero` estático + destaques + `ProductCard`/`ProductGrid`)   | ✅ concluído                                               |
 | Catálogo (`pages/Catalogo`, `useCatalog` unifica filtros, sidebar) | ✅ concluído (MUI removido; `lint` limpo)                  |
 | Página de produto (`pages/Produto`, `/produtos/:id`)               | ✅ código concluído — E2E pendente (reiniciar backend)     |
-| Autenticação                                                       | ⏳ próxima (verificar CORS/`withCredentials`)              |
-| Carrinho                                                           | ⬜ pendente (usar endpoints do backend)                    |
+| Autenticação (`features/auth`, `/login`, `/cadastro`, cookie JWT)  | ✅ código concluído — E2E pendente (reiniciar backend)     |
+| Carrinho                                                           | ⏳ próxima (usar endpoints do backend; exige auth)         |
 | Conta / Pedidos                                                    | ⬜ pendente (backend: leitura de pedidos)                  |
 | Checkout                                                           | ⬜ pendente (pagamento mock)                               |
 | Administração                                                      | ⬜ pendente                                                |
