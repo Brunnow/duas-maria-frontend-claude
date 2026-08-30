@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { FiMinus, FiPlus } from 'react-icons/fi';
 import Button from '@/components/ui/Button';
@@ -11,8 +11,8 @@ import ErrorState from '@/components/shared/ErrorState';
 import ProductGallery from '@/components/product/ProductGallery';
 import SizeSelector from '@/components/product/SizeSelector';
 import { selectIsAuthenticated } from '@/features/auth/authSlice';
+import { addToCart, openDrawer } from '@/features/cart/cartSlice';
 import { useProduct } from '@/hooks/useProduct';
-import { addVariantToCart } from '@/services/cartService';
 import { cn } from '@/lib/cn';
 
 const LOW_STOCK = 5;
@@ -38,6 +38,7 @@ export default function Produto() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const { status, product, variants, error, reload } = useProduct(id);
 
@@ -78,16 +79,24 @@ export default function Produto() {
     setAdding(true);
     setFeedback(null);
     try {
-      await addVariantToCart(product.productId, selectedVariant.variantId, qty);
-      setFeedback({ tone: 'success', message: 'Produto adicionado ao carrinho.' });
-    } catch (err) {
-      const code = err?.response?.status;
-      if (code === 401 || code === 403) {
+      await dispatch(
+        addToCart({
+          productId: product.productId,
+          variantId: selectedVariant.variantId,
+          quantity: qty,
+        }),
+      ).unwrap();
+      dispatch(openDrawer());
+    } catch (payload) {
+      if (payload?.code === 'unauthorized') {
         goToLogin();
+      } else if (payload?.code === 'already_in_cart') {
+        // Ja esta no carrinho: abre o drawer para o usuario ajustar a quantidade.
+        dispatch(openDrawer());
       } else {
         setFeedback({
           tone: 'error',
-          message: err?.response?.data?.message || 'Não foi possível adicionar ao carrinho.',
+          message: payload?.message || 'Não foi possível adicionar ao carrinho.',
         });
       }
     } finally {
