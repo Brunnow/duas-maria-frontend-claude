@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
-import { FiMenu, FiSearch, FiShoppingBag, FiUser } from 'react-icons/fi';
+import { useDispatch, useSelector } from 'react-redux';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { FiMenu, FiSearch, FiShoppingBag } from 'react-icons/fi';
 import Container from '@/components/ui/Container';
+import { logout, selectAuth } from '@/features/auth/authSlice';
 import { cn } from '@/lib/cn';
 import MobileMenu from './MobileMenu';
+import UserMenu from './UserMenu';
 
 const nav = [
   { label: 'Início', to: '/' },
@@ -12,6 +15,15 @@ const nav = [
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { status, user } = useSelector(selectAuth);
+  const isAuthenticated = status === 'authenticated';
+
+  const handleLogout = async () => {
+    await dispatch(logout());
+    navigate('/');
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
@@ -62,13 +74,16 @@ export default function Header() {
           >
             <FiSearch size={20} />
           </button>
-          <Link
-            to="/login"
-            aria-label="Minha conta"
-            className="rounded-control p-2 text-foreground transition-colors hover:bg-subtle"
-          >
-            <FiUser size={20} />
-          </Link>
+          {isAuthenticated ? (
+            <UserMenu username={user?.username} />
+          ) : (
+            <Link
+              to="/login"
+              className="rounded-control px-3 py-2 text-sm text-foreground transition-colors hover:bg-subtle"
+            >
+              Entrar
+            </Link>
+          )}
           <Link
             to="/carrinho"
             aria-label="Carrinho"
@@ -80,7 +95,12 @@ export default function Header() {
         </div>
       </Container>
 
-      <MobileMenu open={mobileOpen} onClose={() => setMobileOpen(false)} nav={nav} />
+      <MobileMenu
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        nav={nav}
+        auth={{ isAuthenticated, onLogout: handleLogout }}
+      />
     </header>
   );
 }
