@@ -1,0 +1,41 @@
+import { configureStore } from '@reduxjs/toolkit';
+import { render } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { MemoryRouter } from 'react-router-dom';
+import authReducer from '@/features/auth/authSlice';
+
+/** Store minima para testes (so o slice de auth). */
+export function makeStore(preloadedState) {
+  return configureStore({
+    reducer: { auth: authReducer },
+    preloadedState,
+  });
+}
+
+/** Estados de auth prontos para os testes. */
+export const anonymousAuth = { auth: { user: null, roles: [], status: 'anonymous' } };
+export const authenticatedAuth = {
+  auth: {
+    user: { id: 1, username: 'maria', roles: ['ROLE_USER'] },
+    roles: ['ROLE_USER'],
+    status: 'authenticated',
+  },
+};
+
+/**
+ * Renderiza `ui` dentro de <Provider> + <MemoryRouter>.
+ * options: { route, preloadedState, store }
+ */
+export function renderWithProviders(
+  ui,
+  { route = '/', preloadedState = anonymousAuth, store = makeStore(preloadedState) } = {},
+) {
+  function Wrapper({ children }) {
+    return (
+      <Provider store={store}>
+        <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+      </Provider>
+    );
+  }
+  return { store, ...render(ui, { wrapper: Wrapper }) };
+}
