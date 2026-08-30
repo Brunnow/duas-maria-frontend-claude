@@ -1,37 +1,63 @@
 @import 'tailwindcss';
 
+/*
+  Tokens de design da Duas Marias.
+  Direcao: minimalista elegante (editorial).
+  Nao usar cores/medidas soltas nos componentes — sempre um token daqui.
+*/
 @theme {
-  --font-montserrat: Montserrat, sans-serif;
+  /* ---------- Tipografia ---------- */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Playfair Display', ui-serif, Georgia, 'Times New Roman', serif;
 
-  --shadow-custom: 0 0 15px rgba(0, 0, 0, 0.3);
-  --shadow-right: 10px 0px 10px -5px rgba(0, 0, 0, 0.3);
+  /* ---------- Cores da marca ---------- */
+  --color-background: #faf9f7; /* off-white quente — fundo padrao */
+  --color-surface: #ffffff; /* cards e superficies elevadas */
+  --color-foreground: #1a1a1a; /* texto principal */
+  --color-muted: #6b6b6b; /* texto secundario */
+  --color-subtle: #f0eeea; /* fundos sutis, hover neutro */
+  --color-border: #e3e0da; /* bordas neutras */
 
-  --color-custom-blue: rgba(28, 100, 242, 1);
+  --color-accent: #6e1423; /* bordo profundo */
+  --color-accent-hover: #571018;
+  --color-accent-fg: #ffffff; /* texto sobre o acento */
 
-  --color-banner-color1: #fdc200;
-  --color-banner-color2: #ff2c2c;
-  --color-banner-color3: #21ad61;
-  --color-banner-color4: #723da6;
+  /* ---------- Estados semanticos ---------- */
+  --color-success: #1f7a53;
+  --color-danger: #b3261e;
+  --color-warning: #a86400;
 
-  --background-image-custom-gradient: linear-gradient(to right, #111827, #1f2937);
-  --background-image-button-gradient: linear-gradient(to right, #7e22ce, #ef4444);
-  --background-image-custom-gradient2: linear-gradient(135deg, #f5f5f5, #eae7dc);
+  /* ---------- Raio ---------- */
+  --radius-control: 4px; /* botoes, inputs, selects */
+  --radius-card: 6px; /* cards, modais, drawers */
+
+  /* ---------- Sombra (discretas) ---------- */
+  --shadow-card: 0 4px 20px rgba(26, 26, 26, 0.06);
+  --shadow-pop: 0 12px 40px rgba(26, 26, 26, 0.12);
 }
 
-/*
-  The default border color has changed to `currentcolor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
 @layer base {
+  /*
+    Compat de border-color do Tailwind v4 (antes era cinza; agora aponta
+    para o token neutro da marca).
+  */
   *,
   ::after,
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
+    border-color: var(--color-border, currentcolor);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }

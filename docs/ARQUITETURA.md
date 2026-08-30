@@ -135,18 +135,18 @@ src/
 
 ## Estado da migração
 
-| Área | Situação |
-|------|----------|
-| Tooling (Prettier, alias, Vitest, `.env.example`) | ✅ concluído |
-| Correção de bugs bloqueantes | ✅ concluído |
-| Design System (tokens, fontes, primitivas) | ⏳ em andamento |
-| Layout global | ⬜ pendente |
-| Home | ⬜ pendente |
-| Catálogo (`pages/Catalogo`, `features/product`, unificar filtros) | ⬜ pendente |
-| Página de produto | ⬜ pendente (depende do backend: GET individual, variações) |
-| Autenticação | ⬜ pendente (verificar CORS/`withCredentials`) |
-| Carrinho | ⬜ pendente (usar endpoints do backend) |
-| Conta / Pedidos | ⬜ pendente (backend: leitura de pedidos) |
-| Checkout | ⬜ pendente (pagamento mock) |
-| Administração | ⬜ pendente |
-| SEO / performance / testes (auditoria) | ⬜ pendente |
+| Área                                                              | Situação                                                    |
+| ----------------------------------------------------------------- | ----------------------------------------------------------- |
+| Tooling (Prettier, alias, Vitest, `.env.example`)                 | ✅ concluído                                                |
+| Correção de bugs bloqueantes                                      | ✅ concluído                                                |
+| Design System (tokens, fontes, primitivas)                        | ⏳ em andamento                                             |
+| Layout global                                                     | ⬜ pendente                                                 |
+| Home                                                              | ⬜ pendente                                                 |
+| Catálogo (`pages/Catalogo`, `features/product`, unificar filtros) | ⬜ pendente                                                 |
+| Página de produto                                                 | ⬜ pendente (depende do backend: GET individual, variações) |
+| Autenticação                                                      | ⬜ pendente (verificar CORS/`withCredentials`)              |
+| Carrinho                                                          | ⬜ pendente (usar endpoints do backend)                     |
+| Conta / Pedidos                                                   | ⬜ pendente (backend: leitura de pedidos)                   |
+| Checkout                                                          | ⬜ pendente (pagamento mock)                                |
+| Administração                                                     | ⬜ pendente                                                 |
+| SEO / performance / testes (auditoria)                            | ⬜ pendente                                                 |
