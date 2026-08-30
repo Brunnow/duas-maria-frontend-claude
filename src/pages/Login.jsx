@@ -47,7 +47,9 @@ export default function Login() {
     setSubmitting(true);
     setFormError(null);
     try {
-      await dispatch(login(values)).unwrap();
+      await dispatch(
+        login({ username: values.username.trim(), password: values.password }),
+      ).unwrap();
       navigate(from, { replace: true });
     } catch (message) {
       setFormError(typeof message === 'string' ? message : 'Não foi possível entrar.');
