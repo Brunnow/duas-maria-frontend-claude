@@ -9,6 +9,7 @@ import Produto from '@/pages/Produto';
 import Login from '@/pages/Login';
 import Cadastro from '@/pages/Cadastro';
 import Carrinho from '@/pages/Carrinho';
+import Checkout from '@/pages/Checkout';
 import Conta from '@/pages/Conta';
 import Pedidos from '@/pages/Pedidos';
 import NotFound from '@/pages/NotFound';
@@ -47,6 +48,7 @@ function App() {
           <Route path="/cadastro" element={<Cadastro />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/carrinho" element={<Carrinho />} />
+            <Route path="/checkout" element={<Checkout />} />
             <Route path="/conta" element={<Conta />} />
             <Route path="/pedidos" element={<Pedidos />} />
           </Route>
