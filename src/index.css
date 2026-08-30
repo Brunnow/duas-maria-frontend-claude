@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   --font-montserrat: Montserrat, sans-serif;
@@ -13,21 +13,9 @@
   --color-banner-color3: #21ad61;
   --color-banner-color4: #723da6;
 
-  --background-image-custom-gradient: linear-gradient(
-    to right,
-    #111827,
-    #1f2937
-  );
-  --background-image-button-gradient: linear-gradient(
-    to right,
-    #7e22ce,
-    #ef4444
-  );
-  --background-image-custom-gradient2: linear-gradient(
-    135deg,
-    #f5f5f5,
-    #eae7dc
-  );
+  --background-image-custom-gradient: linear-gradient(to right, #111827, #1f2937);
+  --background-image-button-gradient: linear-gradient(to right, #7e22ce, #ef4444);
+  --background-image-custom-gradient2: linear-gradient(135deg, #f5f5f5, #eae7dc);
 }
 
 /*

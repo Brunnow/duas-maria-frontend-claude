@@ -1,4 +1,4 @@
-import { RotatingLines } from "react-loader-spinner";
+import { RotatingLines } from 'react-loader-spinner';
 const Loader = ({ text }) => {
   return (
     <div className="flex justify-center items-center w-full h-[450px]">
@@ -14,9 +14,7 @@ const Loader = ({ text }) => {
           wrapperStyle={{}}
           wrapperClass=""
         />
-        <p className="text-slate-800">
-            {text ? text : "Carregando..."}
-        </p>
+        <p className="text-slate-800">{text ? text : 'Carregando...'}</p>
       </div>
     </div>
   );

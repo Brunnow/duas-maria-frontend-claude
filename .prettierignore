@@ -3,3 +3,7 @@ node_modules
 package-lock.json
 *.min.js
 *.min.css
+
+# Documentos escritos a mao (formatacao manual e intencional)
+CLAUDE.md
+README.md
