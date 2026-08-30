@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 import { onUnauthorized } from '@/api/api';
 import Layout from '@/components/layout/Layout';
@@ -8,16 +8,26 @@ import Catalogo from '@/pages/Catalogo';
 import Produto from '@/pages/Produto';
 import Login from '@/pages/Login';
 import Cadastro from '@/pages/Cadastro';
+import Carrinho from '@/pages/Carrinho';
 import NotFound from '@/pages/NotFound';
-import { bootstrapSession, sessionExpired } from '@/features/auth/authSlice';
+import ProtectedRoute from '@/routes/ProtectedRoute';
+import { bootstrapSession, selectIsAuthenticated, sessionExpired } from '@/features/auth/authSlice';
+import { clearCart, fetchCart } from '@/features/cart/cartSlice';
 
 function App() {
   const dispatch = useDispatch();
+  const isAuthenticated = useSelector(selectIsAuthenticated);
 
   useEffect(() => {
     dispatch(bootstrapSession());
     return onUnauthorized(() => dispatch(sessionExpired()));
   }, [dispatch]);
+
+  // O carrinho vive no backend: carrega ao autenticar, limpa ao sair.
+  useEffect(() => {
+    if (isAuthenticated) dispatch(fetchCart());
+    else dispatch(clearCart());
+  }, [isAuthenticated, dispatch]);
 
   return (
     <Router>
@@ -28,6 +38,9 @@ function App() {
           <Route path="/produtos/:id" element={<Produto />} />
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/carrinho" element={<Carrinho />} />
+          </Route>
           {/* Rota antiga em ingles -> redireciona para a versao pt-BR */}
           <Route path="/products" element={<Navigate to="/produtos" replace />} />
           <Route path="*" element={<NotFound />} />

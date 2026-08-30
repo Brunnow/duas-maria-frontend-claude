@@ -4,6 +4,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { FiMenu, FiSearch, FiShoppingBag } from 'react-icons/fi';
 import Container from '@/components/ui/Container';
 import { logout, selectAuth } from '@/features/auth/authSlice';
+import { openDrawer, selectCartCount } from '@/features/cart/cartSlice';
 import { cn } from '@/lib/cn';
 import MobileMenu from './MobileMenu';
 import UserMenu from './UserMenu';
@@ -19,6 +20,7 @@ export default function Header() {
   const navigate = useNavigate();
   const { status, user } = useSelector(selectAuth);
   const isAuthenticated = status === 'authenticated';
+  const cartCount = useSelector(selectCartCount);
 
   const handleLogout = async () => {
     await dispatch(logout());
@@ -84,14 +86,23 @@ export default function Header() {
               Entrar
             </Link>
           )}
-          <Link
-            to="/carrinho"
-            aria-label="Carrinho"
+          <button
+            type="button"
+            onClick={() => dispatch(openDrawer())}
+            aria-label={
+              cartCount > 0
+                ? `Carrinho, ${cartCount} ${cartCount === 1 ? 'item' : 'itens'}`
+                : 'Carrinho'
+            }
             className="relative rounded-control p-2 text-foreground transition-colors hover:bg-subtle"
           >
             <FiShoppingBag size={20} />
-            {/* O contador de itens entra na fase Carrinho */}
-          </Link>
+            {cartCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-accent-fg">
+                {cartCount > 9 ? '9+' : cartCount}
+              </span>
+            )}
+          </button>
         </div>
       </Container>
 

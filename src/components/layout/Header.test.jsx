@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
-import { authenticatedAuth, renderWithProviders } from '@/test/renderWithProviders';
+import {
+  anonymousAuth,
+  authenticatedAuth,
+  cartState,
+  renderWithProviders,
+} from '@/test/renderWithProviders';
 import Header from './Header';
 
 describe('Header', () => {
@@ -10,10 +15,10 @@ describe('Header', () => {
     expect(screen.getByRole('link', { name: 'Produtos' })).toHaveAttribute('href', '/produtos');
   });
 
-  it('deslogado: mostra "Entrar" e o link do carrinho', () => {
+  it('deslogado: mostra "Entrar" e o botao do carrinho', () => {
     renderWithProviders(<Header />);
     expect(screen.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login');
-    expect(screen.getByRole('link', { name: 'Carrinho' })).toHaveAttribute('href', '/carrinho');
+    expect(screen.getByRole('button', { name: 'Carrinho' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Abrir menu' })).toBeInTheDocument();
   });
 
@@ -22,5 +27,15 @@ describe('Header', () => {
     expect(screen.queryByRole('link', { name: 'Entrar' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Minha conta' })).toBeInTheDocument();
     expect(screen.getByText('maria')).toBeInTheDocument();
+  });
+
+  it('mostra a contagem de itens no botao do carrinho', () => {
+    renderWithProviders(<Header />, {
+      preloadedState: {
+        ...anonymousAuth,
+        ...cartState([{ cartItemId: 1, quantity: 3, lineTotal: 30 }]),
+      },
+    });
+    expect(screen.getByRole('button', { name: /carrinho, 3 itens/i })).toBeInTheDocument();
   });
 });
