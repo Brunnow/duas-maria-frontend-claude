@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import { formatCurrency } from '@/lib/format';
+import { shippingMethodLabel } from '@/lib/shipping';
 
 export default function OrderConfirmation({ order }) {
+  const hasShipping = order.shippingAmount != null;
   return (
     <div className="mx-auto max-w-lg text-center">
       <p className="font-display text-2xl text-foreground">Pedido realizado!</p>
@@ -24,6 +26,18 @@ export default function OrderConfirmation({ order }) {
             </li>
           ))}
         </ul>
+        {order.discountAmount != null && Number(order.discountAmount) > 0 && (
+          <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-muted">
+            <span>Desconto{order.couponCode ? ` · ${order.couponCode}` : ''}</span>
+            <span>−{formatCurrency(order.discountAmount)}</span>
+          </div>
+        )}
+        {hasShipping && (
+          <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-muted">
+            <span>Frete · {shippingMethodLabel(order.shippingMethod)}</span>
+            <span>{formatCurrency(order.shippingAmount)}</span>
+          </div>
+        )}
         <div className="mt-3 flex items-center justify-between border-t border-border pt-3 font-medium">
           <span>Total</span>
           <span>{formatCurrency(order.totalAmount)}</span>

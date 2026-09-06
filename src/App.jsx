@@ -12,12 +12,16 @@ import Carrinho from '@/pages/Carrinho';
 import Checkout from '@/pages/Checkout';
 import Conta from '@/pages/Conta';
 import Pedidos from '@/pages/Pedidos';
+import PedidoDetalhe from '@/pages/PedidoDetalhe';
 import NotFound from '@/pages/NotFound';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminHome from '@/pages/admin/AdminHome';
 import AdminProdutos from '@/pages/admin/AdminProdutos';
 import AdminCategorias from '@/pages/admin/AdminCategorias';
 import AdminEstoque from '@/pages/admin/AdminEstoque';
+import AdminPedidos from '@/pages/admin/AdminPedidos';
+import AdminPedidoDetalhe from '@/pages/admin/AdminPedidoDetalhe';
+import AdminCupons from '@/pages/admin/AdminCupons';
 import ProtectedRoute from '@/routes/ProtectedRoute';
 import AdminRoute from '@/routes/AdminRoute';
 import { bootstrapSession, selectIsAuthenticated, sessionExpired } from '@/features/auth/authSlice';
@@ -57,6 +61,7 @@ function App() {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/conta" element={<Conta />} />
             <Route path="/pedidos" element={<Pedidos />} />
+            <Route path="/pedidos/:id" element={<PedidoDetalhe />} />
           </Route>
           <Route path="/admin" element={<AdminRoute />}>
             <Route element={<AdminLayout />}>
@@ -64,6 +69,9 @@ function App() {
               <Route path="produtos" element={<AdminProdutos />} />
               <Route path="categorias" element={<AdminCategorias />} />
               <Route path="estoque" element={<AdminEstoque />} />
+              <Route path="pedidos" element={<AdminPedidos />} />
+              <Route path="pedidos/:id" element={<AdminPedidoDetalhe />} />
+              <Route path="cupons" element={<AdminCupons />} />
             </Route>
           </Route>
           {/* Rota antiga em ingles -> redireciona para a versao pt-BR */}

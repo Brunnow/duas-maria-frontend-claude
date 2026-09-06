@@ -4,6 +4,7 @@ import Button from '@/components/ui/Button';
 import EmptyState from '@/components/shared/EmptyState';
 import AddressForm from '@/components/account/AddressForm';
 import { saveAddress } from '@/features/address/addressSlice';
+import { addressLines } from '@/lib/address';
 import { cn } from '@/lib/cn';
 
 export default function AddressPicker({ addresses, value, onChange }) {
@@ -54,12 +55,11 @@ export default function AddressPicker({ addresses, value, onChange }) {
                 checked={value === address.addressId}
                 onChange={() => onChange(address.addressId)}
               />
-              <p className="text-foreground">{address.street}</p>
-              {address.buildingName && <p className="text-muted">{address.buildingName}</p>}
-              <p className="mt-1 text-muted">
-                {address.city} — {address.state}, {address.country}
-              </p>
-              <p className="text-muted">CEP {address.pincode}</p>
+              {addressLines(address).map((line, i) => (
+                <p key={line} className={i === 0 ? 'text-foreground' : 'text-muted'}>
+                  {line}
+                </p>
+              ))}
             </label>
           ))}
         </div>

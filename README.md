@@ -1,3 +1,15 @@
+# Duas Marias — Frontend
+
+## Variáveis de ambiente
+
+| Variável | Para que serve | Dev (`.env`) | Produção |
+|---|---|---|---|
+| `VITE_BACK_END_URL` | URL base da API (sem `/api`, sem barra final). Usada em `src/api/api.js`. | `http://localhost:8080` | URL pública real do backend — crie `.env.production` a partir de `.env.production.example` quando o domínio de produção existir. |
+
+Nenhuma dessas variáveis é secreta (é só a URL pública da API); credenciais e tokens continuam vivendo exclusivamente no backend, nunca aqui.
+
+---
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

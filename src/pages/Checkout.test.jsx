@@ -5,14 +5,20 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { authenticatedAuth, cartState, makeStore } from '@/test/renderWithProviders';
 
 vi.mock('@/services/orderService', () => ({ placeOrder: vi.fn() }));
+vi.mock('@/services/shippingService', () => ({ quoteShipping: vi.fn() }));
+vi.mock('@/services/couponService', () => ({ validateCoupon: vi.fn() }));
 vi.mock('@/services/addressService', () => ({
-  getUserAddresses: vi.fn().mockResolvedValue([]),
+  getUserAddresses: vi.fn(),
   createAddress: vi.fn(),
   updateAddress: vi.fn(),
   deleteAddress: vi.fn(),
 }));
 
+import { getUserAddresses } from '@/services/addressService';
+
 import { placeOrder } from '@/services/orderService';
+import { quoteShipping } from '@/services/shippingService';
+import { validateCoupon } from '@/services/couponService';
 import Checkout from './Checkout';
 
 const ITEM = {
@@ -29,15 +35,21 @@ const ITEM = {
 
 const ADDRESS = {
   addressId: 1,
+  recipientName: 'Maria da Silva',
+  phone: '(81) 91234-5678',
+  pincode: '50000-000',
   street: 'Rua das Flores',
+  number: '123',
   buildingName: 'Apto 1',
+  neighborhood: 'Boa Viagem',
   city: 'Recife',
   state: 'PE',
-  country: 'Brasil',
-  pincode: '50000000',
 };
 
 function renderCheckout({ items = [ITEM], addresses = [ADDRESS] } = {}) {
+  // O mount do Checkout dispara fetchAddresses; devolver a MESMA lista
+  // evita que a store seja zerada durante o teste.
+  getUserAddresses.mockResolvedValue(addresses);
   const store = makeStore({
     ...authenticatedAuth,
     ...cartState(items),
@@ -56,14 +68,20 @@ function renderCheckout({ items = [ITEM], addresses = [ADDRESS] } = {}) {
   return store;
 }
 
-const goThroughSteps = () => {
+// Endereço -> Frete -> Pagamento -> (Revisão)
+const goThroughSteps = async () => {
   fireEvent.click(screen.getByRole('radio', { name: /Rua das Flores/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+  expect(await screen.findByText(/R\$\s*14,90/)).toBeInTheDocument(); // frete cotado
   fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
   fireEvent.click(screen.getByRole('radio', { name: /PIX/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  quoteShipping.mockResolvedValue({ shippingAmount: 14.9, shippingMethod: 'FIXED_UF' });
+});
 
 describe('Checkout', () => {
   it('redireciona para o carrinho quando esta vazio', () => {
@@ -71,11 +89,39 @@ describe('Checkout', () => {
     expect(screen.getByText('Pagina do carrinho')).toBeInTheDocument();
   });
 
+  it('cota o frete pela UF do endereco e soma produtos + frete na revisao', async () => {
+    renderCheckout();
+    await goThroughSteps();
+
+    await waitFor(() => expect(quoteShipping).toHaveBeenCalledWith('PE'));
+    // Produtos 259,90 + Frete 14,90 = 274,80
+    expect(await screen.findByText(/R\$\s*274,80/)).toBeInTheDocument();
+    expect(screen.getByText(/Entrega padrão/)).toBeInTheDocument();
+  });
+
+  it('mostra erro de cotacao e permite tentar de novo', async () => {
+    quoteShipping.mockRejectedValueOnce({ response: { data: { uf: 'UF inválida' } } });
+    renderCheckout();
+
+    fireEvent.click(screen.getByRole('radio', { name: /Rua das Flores/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    expect(await screen.findByText('UF inválida')).toBeInTheDocument();
+    // Continuar fica desabilitado enquanto o frete nao cotou
+    expect(screen.getByRole('button', { name: 'Continuar' })).toBeDisabled();
+
+    quoteShipping.mockResolvedValueOnce({ shippingAmount: 14.9, shippingMethod: 'FIXED_UF' });
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(await screen.findByText(/R\$\s*14,90/)).toBeInTheDocument();
+  });
+
   it('percorre os passos e finaliza o pedido com addressId e paymentMethod', async () => {
     placeOrder.mockResolvedValue({
       orderId: 99,
-      orderStatus: 'Order Accepted!',
-      totalAmount: 259.9,
+      orderStatus: 'PAGO',
+      totalAmount: 274.8,
+      shippingAmount: 14.9,
+      shippingMethod: 'FIXED_UF',
       orderItems: [
         {
           orderItemId: 1,
@@ -89,14 +135,58 @@ describe('Checkout', () => {
     });
 
     renderCheckout();
-    goThroughSteps();
+    await goThroughSteps();
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar pedido' }));
 
     await waitFor(() =>
-      expect(placeOrder).toHaveBeenCalledWith({ addressId: 1, paymentMethod: 'pix-qr' }),
+      expect(placeOrder).toHaveBeenCalledWith({
+        addressId: 1,
+        paymentMethod: 'pix-qr',
+        couponCode: undefined,
+      }),
     );
     expect(await screen.findByText('Pedido realizado!')).toBeInTheDocument();
     expect(screen.getByText(/#99/)).toBeInTheDocument();
+    expect(screen.getByText(/R\$\s*274,80/)).toBeInTheDocument();
+  });
+
+  it('aplica um cupom e envia couponCode no fechamento', async () => {
+    validateCoupon.mockResolvedValue({
+      code: 'PROMO10',
+      discountType: 'PERCENT',
+      discountValue: 10,
+      discountAmount: 25.99,
+      subtotal: 259.9,
+      subtotalAfterDiscount: 233.91,
+    });
+    placeOrder.mockResolvedValue({
+      orderId: 5,
+      orderStatus: 'PAGO',
+      totalAmount: 248.81,
+      shippingAmount: 14.9,
+      shippingMethod: 'FIXED_UF',
+      couponCode: 'PROMO10',
+      discountAmount: 25.99,
+      orderItems: [],
+    });
+
+    renderCheckout();
+    await goThroughSteps();
+
+    fireEvent.change(screen.getByLabelText('Cupom de desconto'), { target: { value: 'PROMO10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
+    // resumo do cupom aplicado no CouponField
+    expect(await screen.findByText(/aplicado — desconto de/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar pedido' }));
+
+    await waitFor(() =>
+      expect(placeOrder).toHaveBeenCalledWith({
+        addressId: 1,
+        paymentMethod: 'pix-qr',
+        couponCode: 'PROMO10',
+      }),
+    );
   });
 
   it('mostra os itens sem estoque quando o backend responde 409', async () => {
@@ -113,7 +203,7 @@ describe('Checkout', () => {
     });
 
     renderCheckout();
-    goThroughSteps();
+    await goThroughSteps();
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar pedido' }));
 
     expect(

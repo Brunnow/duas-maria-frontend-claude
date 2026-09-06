@@ -4,9 +4,11 @@ import { cn } from '@/lib/cn';
 
 const NAV = [
   { to: '/admin', label: 'Visão geral', end: true },
+  { to: '/admin/pedidos', label: 'Pedidos' },
   { to: '/admin/produtos', label: 'Produtos' },
   { to: '/admin/categorias', label: 'Categorias' },
   { to: '/admin/estoque', label: 'Estoque' },
+  { to: '/admin/cupons', label: 'Cupons' },
 ];
 
 export default function AdminLayout() {

@@ -1,18 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, Navigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
 import StepNav from '@/components/checkout/StepNav';
 import AddressPicker from '@/components/checkout/AddressPicker';
+import ShippingStep from '@/components/checkout/ShippingStep';
 import PaymentPicker from '@/components/checkout/PaymentPicker';
+import CouponField from '@/components/checkout/CouponField';
 import OrderReview from '@/components/checkout/OrderReview';
 import OrderConfirmation from '@/components/checkout/OrderConfirmation';
+import { useFetch } from '@/hooks/useFetch';
 import { clearCart, selectCartItems } from '@/features/cart/cartSlice';
 import { fetchAddresses, selectAddresses } from '@/features/address/addressSlice';
 import { placeOrder } from '@/services/orderService';
+import { quoteShipping } from '@/services/shippingService';
 
-const STEPS = ['Endereço', 'Pagamento', 'Revisão'];
+const STEPS = ['Endereço', 'Frete', 'Pagamento', 'Revisão'];
 
 /* Rota protegida (ver App.jsx). */
 export default function Checkout() {
@@ -23,6 +27,7 @@ export default function Checkout() {
   const [step, setStep] = useState(0);
   const [addressId, setAddressId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState(null);
+  const [coupon, setCoupon] = useState(null); // { code, discountAmount } | null
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState(null);
   const [shortage, setShortage] = useState(null);
@@ -31,6 +36,24 @@ export default function Checkout() {
   useEffect(() => {
     dispatch(fetchAddresses());
   }, [dispatch]);
+
+  const selectedAddress = addresses.find((a) => a.addressId === addressId);
+  const uf = selectedAddress?.state || null;
+
+  // Cotação de frete pela UF do endereço selecionado. O backend recalcula
+  // na criação do pedido; este valor é informativo para a revisão.
+  const shippingFetcher = useCallback(() => {
+    if (!uf) return Promise.resolve(null);
+    return quoteShipping(uf).catch((err) => {
+      const data = err?.response?.data;
+      const msg =
+        data?.uf || data?.message || 'Não foi possível calcular o frete para este endereço.';
+      const normalized = new Error(msg);
+      normalized.response = { data: { message: msg } };
+      throw normalized;
+    });
+  }, [uf]);
+  const shipping = useFetch(shippingFetcher, [uf]);
 
   // Carrinho vazio e pedido ainda nao finalizado -> volta para o carrinho.
   if (!order && items.length === 0) {
@@ -45,15 +68,19 @@ export default function Checkout() {
     );
   }
 
+  const shippingReady = shipping.status === 'ready' && shipping.data != null;
   const canContinue =
-    (step === 0 && addressId != null) || (step === 1 && paymentMethod != null) || step === 2;
+    (step === 0 && addressId != null) ||
+    (step === 1 && shippingReady) ||
+    (step === 2 && paymentMethod != null) ||
+    step === 3;
 
   const handleConfirm = async () => {
     setPlacing(true);
     setError(null);
     setShortage(null);
     try {
-      const dto = await placeOrder({ addressId, paymentMethod });
+      const dto = await placeOrder({ addressId, paymentMethod, couponCode: coupon?.code });
       dispatch(clearCart());
       setOrder(dto);
     } catch (err) {
@@ -61,7 +88,8 @@ export default function Checkout() {
       const data = err?.response?.data;
       if (status === 409 && Array.isArray(data?.unavailableItems)) {
         setShortage(data.unavailableItems);
-      } else if (status === 400 || status === 404) {
+      } else if (status === 400 || status === 404 || status === 409) {
+        // inclui cupom recusado no fechamento (inválido -> 400, limite -> 409)
         setError(data?.message || 'Não foi possível finalizar o pedido.');
       } else {
         setError('Não foi possível finalizar o pedido. Tente novamente.');
@@ -80,13 +108,19 @@ export default function Checkout() {
         {step === 0 && (
           <AddressPicker addresses={addresses} value={addressId} onChange={setAddressId} />
         )}
-        {step === 1 && <PaymentPicker value={paymentMethod} onChange={setPaymentMethod} />}
-        {step === 2 && (
-          <OrderReview
-            items={items}
-            address={addresses.find((a) => a.addressId === addressId)}
-            paymentMethod={paymentMethod}
-          />
+        {step === 1 && <ShippingStep shipping={shipping} uf={uf} onRetry={shipping.refetch} />}
+        {step === 2 && <PaymentPicker value={paymentMethod} onChange={setPaymentMethod} />}
+        {step === 3 && (
+          <>
+            <OrderReview
+              items={items}
+              address={selectedAddress}
+              paymentMethod={paymentMethod}
+              shipping={shipping.data}
+              coupon={coupon}
+            />
+            <CouponField value={coupon} onApply={setCoupon} onRemove={() => setCoupon(null)} />
+          </>
         )}
       </div>
 
@@ -124,7 +158,7 @@ export default function Checkout() {
         >
           Voltar
         </Button>
-        {step < 2 ? (
+        {step < 3 ? (
           <Button onClick={() => setStep((s) => s + 1)} disabled={!canContinue}>
             Continuar
           </Button>
@@ -132,7 +166,7 @@ export default function Checkout() {
           <Button
             onClick={handleConfirm}
             loading={placing}
-            disabled={addressId == null || !paymentMethod}
+            disabled={addressId == null || !paymentMethod || !shippingReady}
           >
             Confirmar pedido
           </Button>

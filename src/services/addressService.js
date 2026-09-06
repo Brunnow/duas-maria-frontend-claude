@@ -7,7 +7,10 @@ import api from '@/api/api';
  *   PUT    /api/addresses/{id}       -> AddressDTO
  *   DELETE /api/addresses/{id}       -> string
  *
- * AddressDTO = { addressId, street, buildingName, city, state, country, pincode }
+ * AddressDTO (endereço brasileiro; validado no backend com mensagens pt-BR):
+ *   { addressId, recipientName, phone, pincode (CEP), street (logradouro),
+ *     number, buildingName (complemento, opcional), neighborhood (bairro),
+ *     city, state (UF), country (opcional — backend assume "Brasil") }
  */
 
 export function getUserAddresses() {

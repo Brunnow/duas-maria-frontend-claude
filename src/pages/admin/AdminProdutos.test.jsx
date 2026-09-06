@@ -12,6 +12,11 @@ vi.mock('@/services/adminService', () => ({
   updateProduct: vi.fn(),
   deleteProduct: vi.fn(),
   uploadProductImage: vi.fn(),
+  getVariants: vi.fn().mockResolvedValue([]),
+  createVariants: vi.fn(),
+  deleteVariant: vi.fn(),
+  recountStock: vi.fn(),
+  registerMovement: vi.fn(),
 }));
 
 import * as adminService from '@/services/adminService';
@@ -75,5 +80,46 @@ describe('AdminProdutos', () => {
         }),
       ),
     );
+    // Nenhum tamanho marcado -> não cria grade.
+    expect(adminService.createVariants).not.toHaveBeenCalled();
+  });
+
+  it('cria o produto e a grade de tamanhos de forma integrada', async () => {
+    adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
+    adminService.createProduct.mockResolvedValue({ productId: 42 });
+    adminService.createVariants.mockResolvedValue([{ variantId: 1, size: 'P', stock: 3 }]);
+
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Nenhum produto');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo produto' }));
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Vestido Midi' } });
+    fireEvent.change(screen.getByLabelText('Descrição'), { target: { value: 'Vestido midi' } });
+    fireEvent.change(screen.getByLabelText('Preço (R$)'), { target: { value: '199.9' } });
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: '7' } });
+
+    fireEvent.click(screen.getByLabelText('Tamanho P'));
+    fireEvent.change(screen.getByLabelText('Estoque inicial P'), { target: { value: '3' } });
+    fireEvent.click(screen.getByLabelText('Tamanho M'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar produto' }));
+
+    await waitFor(() => expect(adminService.createProduct).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(adminService.createVariants).toHaveBeenCalledWith(42, [
+        { size: 'P', initialStock: 3 },
+        { size: 'M', initialStock: 0 },
+      ]),
+    );
+  });
+
+  it('desabilita "Único" quando ha tamanhos numerados marcados', async () => {
+    adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Nenhum produto');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo produto' }));
+    fireEvent.click(screen.getByLabelText('Tamanho P'));
+    expect(screen.getByLabelText('Tamanho Único')).toBeDisabled();
   });
 });

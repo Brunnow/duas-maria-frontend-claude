@@ -1,10 +1,16 @@
 import { formatCurrency } from '@/lib/format';
+import { addressLines } from '@/lib/address';
+import { shippingMethodLabel } from '@/lib/shipping';
 import { PAYMENT_METHODS } from './paymentMethods';
 
-export default function OrderReview({ items, address, paymentMethod }) {
-  const total = items.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
+export default function OrderReview({ items, address, paymentMethod, shipping, coupon }) {
+  const productsTotal = items.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
   const count = items.reduce((n, item) => n + (item.quantity || 0), 0);
   const method = PAYMENT_METHODS.find((m) => m.value === paymentMethod);
+  const shippingAmount = Number(shipping?.shippingAmount) || 0;
+  // Preview: o backend recalcula o desconto ao criar o pedido.
+  const discount = Math.min(Number(coupon?.discountAmount) || 0, productsTotal);
+  const total = productsTotal - discount + shippingAmount;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
@@ -37,10 +43,11 @@ export default function OrderReview({ items, address, paymentMethod }) {
         <div className="mt-5 text-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Entrega</p>
           {address ? (
-            <p className="mt-1 text-muted">
-              {address.street}, {address.buildingName} — {address.city}/{address.state}, CEP{' '}
-              {address.pincode}
-            </p>
+            <div className="mt-1 text-muted">
+              {addressLines(address).map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
           ) : (
             <p className="mt-1 text-danger">Endereço não selecionado</p>
           )}
@@ -58,9 +65,22 @@ export default function OrderReview({ items, address, paymentMethod }) {
         <h3 className="font-display text-lg text-foreground">Total</h3>
         <div className="mt-3 flex items-center justify-between text-sm">
           <span className="text-muted">
-            {count} {count === 1 ? 'item' : 'itens'}
+            Produtos ({count} {count === 1 ? 'item' : 'itens'})
           </span>
-          <span className="text-foreground">{formatCurrency(total)}</span>
+          <span className="text-foreground">{formatCurrency(productsTotal)}</span>
+        </div>
+        {discount > 0 && (
+          <div className="mt-2 flex items-center justify-between text-sm">
+            <span className="text-muted">Desconto{coupon?.code ? ` · ${coupon.code}` : ''}</span>
+            <span className="text-foreground">−{formatCurrency(discount)}</span>
+          </div>
+        )}
+        <div className="mt-2 flex items-center justify-between text-sm">
+          <span className="text-muted">
+            Frete
+            {shipping?.shippingMethod ? ` · ${shippingMethodLabel(shipping.shippingMethod)}` : ''}
+          </span>
+          <span className="text-foreground">{formatCurrency(shippingAmount)}</span>
         </div>
         <div className="mt-2 flex items-center justify-between border-t border-border pt-3 text-sm font-medium">
           <span>A pagar</span>

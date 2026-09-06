@@ -145,7 +145,12 @@ export default function Produto() {
           </nav>
 
           <div className="grid gap-10 lg:grid-cols-2">
-            <ProductGallery image={product.image} alt={product.productName} />
+            <ProductGallery
+              key={product.productId}
+              images={product.images}
+              image={product.image}
+              alt={product.productName}
+            />
 
             <div className="flex flex-col gap-5">
               <h1 className="font-display text-3xl text-foreground lg:text-4xl">

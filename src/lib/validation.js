@@ -22,6 +22,13 @@ export const isEmail =
 export const matches = (getOther, message) => (value) =>
   value === getOther() ? null : message || 'Os valores não conferem';
 
+export const pattern = (regex, message) => (value) =>
+  regex.test(String(value ?? '')) ? null : message || 'Formato inválido';
+
+/** Valida contra uma lista fechada de valores permitidos. */
+export const oneOf = (allowed, message) => (value) =>
+  allowed.includes(String(value ?? '')) ? null : message || 'Valor inválido';
+
 /** Aplica uma lista de regras a um valor e retorna o primeiro erro. */
 export function firstError(value, rules) {
   for (const rule of rules) {

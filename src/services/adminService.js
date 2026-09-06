@@ -31,11 +31,47 @@ export function deleteProduct(productId) {
   return api.delete(`/admin/products/${productId}`).then((response) => response.data);
 }
 
-/** PUT /api/products/{productId}/image (multipart; exige apenas auth) */
+/** PUT /api/products/{productId}/image (multipart; substitui a imagem principal) */
 export function uploadProductImage(productId, file) {
   const form = new FormData();
   form.append('image', file);
   return api.put(`/products/${productId}/image`, form).then((response) => response.data);
+}
+
+// ---------- Galeria de imagens (ROLE_ADMIN) ----------
+// Todos devolvem a lista final ProductImageDTO[] = [{ imageId, url, alt, primary, position }].
+
+/** GET /api/admin/products/{id}/images */
+export function listProductImages(productId) {
+  return api.get(`/admin/products/${productId}/images`).then((response) => response.data);
+}
+
+/** POST /api/admin/products/{id}/images (multipart "images", N arquivos, máx. 8/produto) */
+export function uploadProductImages(productId, files) {
+  const form = new FormData();
+  Array.from(files).forEach((file) => form.append('images', file));
+  return api.post(`/admin/products/${productId}/images`, form).then((response) => response.data);
+}
+
+/** DELETE /api/admin/products/{id}/images/{imageId} */
+export function deleteProductImage(productId, imageId) {
+  return api
+    .delete(`/admin/products/${productId}/images/${imageId}`)
+    .then((response) => response.data);
+}
+
+/** PUT /api/admin/products/{id}/images/{imageId}/primary */
+export function setPrimaryProductImage(productId, imageId) {
+  return api
+    .put(`/admin/products/${productId}/images/${imageId}/primary`)
+    .then((response) => response.data);
+}
+
+/** PUT /api/admin/products/{id}/images/order { imageIds: [...] } */
+export function reorderProductImages(productId, imageIds) {
+  return api
+    .put(`/admin/products/${productId}/images/order`, { imageIds })
+    .then((response) => response.data);
 }
 
 // ---------- Categorias ----------

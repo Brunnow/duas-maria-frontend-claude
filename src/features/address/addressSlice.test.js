@@ -21,12 +21,15 @@ const makeStore = () => configureStore({ reducer: { address: reducer } });
 
 const A1 = {
   addressId: 1,
+  recipientName: 'Maria da Silva',
+  phone: '(81) 91234-5678',
+  pincode: '50000-000',
   street: 'Rua A',
+  number: '10',
   buildingName: 'Casa 1',
+  neighborhood: 'Centro',
   city: 'Recife',
   state: 'PE',
-  country: 'Brasil',
-  pincode: '50000000',
 };
 
 beforeEach(() => vi.clearAllMocks());

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import VariantGridInput from '@/components/admin/VariantGridInput';
+import { toGridPayload } from '@/lib/variants';
 import { computeSpecialPrice, formatCurrency } from '@/lib/format';
 import { minLength, required, validateForm } from '@/lib/validation';
 
@@ -27,6 +29,7 @@ export default function ProductForm({ product, categories = [], onSubmit, onCanc
   const isEdit = Boolean(product?.productId);
   const [values, setValues] = useState(() => toForm(product));
   const [categoryId, setCategoryId] = useState('');
+  const [variants, setVariants] = useState({}); // { [size]: stockString } — só na criação
   const [errors, setErrors] = useState({});
 
   const handleChange = (event) => {
@@ -58,6 +61,7 @@ export default function ProductForm({ product, categories = [], onSubmit, onCanc
         discount,
         specialPrice,
       },
+      variants: isEdit ? undefined : toGridPayload(variants),
     });
   };
 
@@ -126,6 +130,12 @@ export default function ProductForm({ product, categories = [], onSubmit, onCanc
       <p className="text-sm text-muted sm:col-span-2">
         Preço final: <span className="text-foreground">{formatCurrency(specialPrice)}</span>
       </p>
+
+      {!isEdit && (
+        <div className="sm:col-span-2">
+          <VariantGridInput value={variants} onChange={setVariants} />
+        </div>
+      )}
 
       <div className="flex gap-3 sm:col-span-2">
         <Button type="submit" loading={submitting}>
