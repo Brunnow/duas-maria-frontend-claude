@@ -4,7 +4,10 @@ import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { authenticatedAuth, cartState, makeStore } from '@/test/renderWithProviders';
 
-vi.mock('@/services/orderService', () => ({ placeOrder: vi.fn() }));
+vi.mock('@/services/orderService', () => ({
+  createOrder: vi.fn(),
+  startMercadoPagoPayment: vi.fn(),
+}));
 vi.mock('@/services/shippingService', () => ({ quoteShipping: vi.fn() }));
 vi.mock('@/services/couponService', () => ({ validateCoupon: vi.fn() }));
 vi.mock('@/services/addressService', () => ({
@@ -13,12 +16,14 @@ vi.mock('@/services/addressService', () => ({
   updateAddress: vi.fn(),
   deleteAddress: vi.fn(),
 }));
+vi.mock('@/lib/navigate', () => ({ goToExternal: vi.fn() }));
 
 import { getUserAddresses } from '@/services/addressService';
 
-import { placeOrder } from '@/services/orderService';
+import { createOrder, startMercadoPagoPayment } from '@/services/orderService';
 import { quoteShipping } from '@/services/shippingService';
 import { validateCoupon } from '@/services/couponService';
+import { goToExternal } from '@/lib/navigate';
 import Checkout from './Checkout';
 
 const ITEM = {
@@ -68,13 +73,11 @@ function renderCheckout({ items = [ITEM], addresses = [ADDRESS] } = {}) {
   return store;
 }
 
-// Endereço -> Frete -> Pagamento -> (Revisão)
+// Endereço -> Frete -> Revisão (sem passo de pagamento: a escolha é no Mercado Pago)
 const goThroughSteps = async () => {
   fireEvent.click(screen.getByRole('radio', { name: /Rua das Flores/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
   expect(await screen.findByText(/R\$\s*14,90/)).toBeInTheDocument(); // frete cotado
-  fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
-  fireEvent.click(screen.getByRole('radio', { name: /PIX/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 };
 
@@ -115,42 +118,28 @@ describe('Checkout', () => {
     expect(await screen.findByText(/R\$\s*14,90/)).toBeInTheDocument();
   });
 
-  it('percorre os passos e finaliza o pedido com addressId e paymentMethod', async () => {
-    placeOrder.mockResolvedValue({
-      orderId: 99,
-      orderStatus: 'PAGO',
-      totalAmount: 274.8,
-      shippingAmount: 14.9,
-      shippingMethod: 'FIXED_UF',
-      orderItems: [
-        {
-          orderItemId: 1,
-          product: { productName: 'Vestido Midi' },
-          size: 'M',
-          quantity: 1,
-          orderedProductPrice: 259.9,
-          sku: 'VESTIDO-MIDI-M',
-        },
-      ],
+  it('cria o pedido e redireciona ao Mercado Pago', async () => {
+    createOrder.mockResolvedValue({
+      order: { orderId: 99, orderStatus: 'AGUARDANDO_PAGAMENTO', paymentStatus: 'PENDING' },
+      initPoint: 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=abc',
+      paymentInitFailed: false,
     });
 
     renderCheckout();
     await goThroughSteps();
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar pedido' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ir para o pagamento' }));
 
     await waitFor(() =>
-      expect(placeOrder).toHaveBeenCalledWith({
-        addressId: 1,
-        paymentMethod: 'pix-qr',
-        couponCode: undefined,
-      }),
+      expect(createOrder).toHaveBeenCalledWith({ addressId: 1, couponCode: undefined }),
     );
-    expect(await screen.findByText('Pedido realizado!')).toBeInTheDocument();
-    expect(screen.getByText(/#99/)).toBeInTheDocument();
-    expect(screen.getByText(/R\$\s*274,80/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(goToExternal).toHaveBeenCalledWith(
+        'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=abc',
+      ),
+    );
   });
 
-  it('aplica um cupom e envia couponCode no fechamento', async () => {
+  it('aplica um cupom e envia couponCode na criacao do pedido', async () => {
     validateCoupon.mockResolvedValue({
       code: 'PROMO10',
       discountType: 'PERCENT',
@@ -159,15 +148,10 @@ describe('Checkout', () => {
       subtotal: 259.9,
       subtotalAfterDiscount: 233.91,
     });
-    placeOrder.mockResolvedValue({
-      orderId: 5,
-      orderStatus: 'PAGO',
-      totalAmount: 248.81,
-      shippingAmount: 14.9,
-      shippingMethod: 'FIXED_UF',
-      couponCode: 'PROMO10',
-      discountAmount: 25.99,
-      orderItems: [],
+    createOrder.mockResolvedValue({
+      order: { orderId: 5, orderStatus: 'AGUARDANDO_PAGAMENTO', paymentStatus: 'PENDING' },
+      initPoint: 'https://mp/redirect',
+      paymentInitFailed: false,
     });
 
     renderCheckout();
@@ -178,19 +162,15 @@ describe('Checkout', () => {
     // resumo do cupom aplicado no CouponField
     expect(await screen.findByText(/aplicado — desconto de/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar pedido' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ir para o pagamento' }));
 
     await waitFor(() =>
-      expect(placeOrder).toHaveBeenCalledWith({
-        addressId: 1,
-        paymentMethod: 'pix-qr',
-        couponCode: 'PROMO10',
-      }),
+      expect(createOrder).toHaveBeenCalledWith({ addressId: 1, couponCode: 'PROMO10' }),
     );
   });
 
   it('mostra os itens sem estoque quando o backend responde 409', async () => {
-    placeOrder.mockRejectedValue({
+    createOrder.mockRejectedValue({
       response: {
         status: 409,
         data: {
@@ -204,7 +184,7 @@ describe('Checkout', () => {
 
     renderCheckout();
     await goThroughSteps();
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmar pedido' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ir para o pagamento' }));
 
     expect(
       await screen.findByText(/Vestido Midi \(M\) — pedido 3, disponível 1/),
@@ -213,5 +193,29 @@ describe('Checkout', () => {
       'href',
       '/carrinho',
     );
+  });
+
+  it('quando a preference falha, mostra o pedido criado com opcao de tentar de novo', async () => {
+    createOrder.mockResolvedValue({
+      order: { orderId: 42, orderStatus: 'AGUARDANDO_PAGAMENTO', paymentStatus: 'PENDING' },
+      initPoint: null,
+      paymentInitFailed: true,
+    });
+
+    renderCheckout();
+    await goThroughSteps();
+    fireEvent.click(screen.getByRole('button', { name: 'Ir para o pagamento' }));
+
+    expect(await screen.findByText(/#42/)).toBeInTheDocument();
+    expect(screen.getByText(/não foi possível iniciar o pagamento agora/)).toBeInTheDocument();
+
+    startMercadoPagoPayment.mockResolvedValue({
+      preferenceId: 'p1',
+      initPoint: 'https://mp/retry',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar pagamento' }));
+
+    await waitFor(() => expect(startMercadoPagoPayment).toHaveBeenCalledWith(42));
+    await waitFor(() => expect(goToExternal).toHaveBeenCalledWith('https://mp/retry'));
   });
 });

@@ -1,12 +1,10 @@
 import { formatCurrency } from '@/lib/format';
 import { addressLines } from '@/lib/address';
 import { shippingMethodLabel } from '@/lib/shipping';
-import { PAYMENT_METHODS } from './paymentMethods';
 
-export default function OrderReview({ items, address, paymentMethod, shipping, coupon }) {
+export default function OrderReview({ items, address, shipping, coupon }) {
   const productsTotal = items.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
   const count = items.reduce((n, item) => n + (item.quantity || 0), 0);
-  const method = PAYMENT_METHODS.find((m) => m.value === paymentMethod);
   const shippingAmount = Number(shipping?.shippingAmount) || 0;
   // Preview: o backend recalcula o desconto ao criar o pedido.
   const discount = Math.min(Number(coupon?.discountAmount) || 0, productsTotal);
@@ -57,7 +55,9 @@ export default function OrderReview({ items, address, paymentMethod, shipping, c
           <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
             Pagamento
           </p>
-          <p className="mt-1 text-muted">{method?.label || paymentMethod} (simulado)</p>
+          <p className="mt-1 text-muted">
+            Você escolhe Pix, cartão ou boleto na página do Mercado Pago, no próximo passo.
+          </p>
         </div>
       </div>
 

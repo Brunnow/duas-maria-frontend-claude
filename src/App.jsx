@@ -10,6 +10,7 @@ import Login from '@/pages/Login';
 import Cadastro from '@/pages/Cadastro';
 import Carrinho from '@/pages/Carrinho';
 import Checkout from '@/pages/Checkout';
+import CheckoutRetorno from '@/pages/CheckoutRetorno';
 import Conta from '@/pages/Conta';
 import Pedidos from '@/pages/Pedidos';
 import PedidoDetalhe from '@/pages/PedidoDetalhe';
@@ -59,6 +60,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/carrinho" element={<Carrinho />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/checkout/retorno" element={<CheckoutRetorno />} />
             <Route path="/conta" element={<Conta />} />
             <Route path="/pedidos" element={<Pedidos />} />
             <Route path="/pedidos/:id" element={<PedidoDetalhe />} />

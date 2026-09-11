@@ -6,19 +6,23 @@ import Container from '@/components/ui/Container';
 import StepNav from '@/components/checkout/StepNav';
 import AddressPicker from '@/components/checkout/AddressPicker';
 import ShippingStep from '@/components/checkout/ShippingStep';
-import PaymentPicker from '@/components/checkout/PaymentPicker';
 import CouponField from '@/components/checkout/CouponField';
 import OrderReview from '@/components/checkout/OrderReview';
-import OrderConfirmation from '@/components/checkout/OrderConfirmation';
 import { useFetch } from '@/hooks/useFetch';
-import { clearCart, selectCartItems } from '@/features/cart/cartSlice';
+import { selectCartItems } from '@/features/cart/cartSlice';
 import { fetchAddresses, selectAddresses } from '@/features/address/addressSlice';
-import { placeOrder } from '@/services/orderService';
+import { createOrder, startMercadoPagoPayment } from '@/services/orderService';
 import { quoteShipping } from '@/services/shippingService';
+import { goToExternal } from '@/lib/navigate';
 
-const STEPS = ['Endereço', 'Frete', 'Pagamento', 'Revisão'];
+const STEPS = ['Endereço', 'Frete', 'Revisão'];
 
-/* Rota protegida (ver App.jsx). */
+/*
+ * Rota protegida (ver App.jsx). Ao confirmar, cria o pedido e redireciona ao
+ * Checkout Pro do Mercado Pago — a escolha entre Pix/cartão/boleto acontece
+ * lá, não aqui. A confirmação do pagamento chega pelo webhook; esta tela não
+ * espera por ela (ver /checkout/retorno).
+ */
 export default function Checkout() {
   const dispatch = useDispatch();
   const items = useSelector(selectCartItems);
@@ -26,12 +30,14 @@ export default function Checkout() {
 
   const [step, setStep] = useState(0);
   const [addressId, setAddressId] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState(null);
   const [coupon, setCoupon] = useState(null); // { code, discountAmount } | null
   const [placing, setPlacing] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState(null);
   const [shortage, setShortage] = useState(null);
-  const [order, setOrder] = useState(null);
+  // Pedido criado mas a preference do Mercado Pago falhou na hora — fica aqui
+  // até o cliente conseguir iniciar o pagamento (retry), em vez de perder o pedido.
+  const [pendingOrder, setPendingOrder] = useState(null);
 
   useEffect(() => {
     dispatch(fetchAddresses());
@@ -55,34 +61,66 @@ export default function Checkout() {
   }, [uf]);
   const shipping = useFetch(shippingFetcher, [uf]);
 
-  // Carrinho vazio e pedido ainda nao finalizado -> volta para o carrinho.
-  if (!order && items.length === 0) {
+  // Carrinho vazio e nenhum pedido pendente de pagamento -> volta para o carrinho.
+  if (!pendingOrder && items.length === 0) {
     return <Navigate to="/carrinho" replace />;
   }
 
-  if (order) {
+  const handleRetryPayment = async () => {
+    setRetrying(true);
+    setError(null);
+    try {
+      const { initPoint } = await startMercadoPagoPayment(pendingOrder.orderId);
+      goToExternal(initPoint);
+    } catch {
+      setError('Ainda não foi possível iniciar o pagamento. Tente novamente em instantes.');
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  if (pendingOrder) {
     return (
       <Container className="py-10 lg:py-14">
-        <OrderConfirmation order={order} />
+        <div className="mx-auto max-w-lg text-center">
+          <p className="font-display text-2xl text-foreground">Pedido criado</p>
+          <p className="mt-2 text-sm text-muted">
+            Pedido <span className="font-medium text-foreground">#{pendingOrder.orderId}</span>{' '}
+            aguardando pagamento. Não conseguimos abrir o Mercado Pago agora, mas o pedido já está
+            salvo.
+          </p>
+          {error && (
+            <p role="alert" className="mt-4 text-sm text-danger">
+              {error}
+            </p>
+          )}
+          <Button onClick={handleRetryPayment} loading={retrying} className="mt-6">
+            Iniciar pagamento
+          </Button>
+        </div>
       </Container>
     );
   }
 
   const shippingReady = shipping.status === 'ready' && shipping.data != null;
   const canContinue =
-    (step === 0 && addressId != null) ||
-    (step === 1 && shippingReady) ||
-    (step === 2 && paymentMethod != null) ||
-    step === 3;
+    (step === 0 && addressId != null) || (step === 1 && shippingReady) || step === 2;
 
   const handleConfirm = async () => {
     setPlacing(true);
     setError(null);
     setShortage(null);
     try {
-      const dto = await placeOrder({ addressId, paymentMethod, couponCode: coupon?.code });
-      dispatch(clearCart());
-      setOrder(dto);
+      const { order, initPoint, paymentInitFailed } = await createOrder({
+        addressId,
+        couponCode: coupon?.code,
+      });
+      if (paymentInitFailed || !initPoint) {
+        setPendingOrder(order);
+        setError('Pedido criado, mas não foi possível iniciar o pagamento agora.');
+        return;
+      }
+      goToExternal(initPoint);
     } catch (err) {
       const status = err?.response?.status;
       const data = err?.response?.data;
@@ -109,13 +147,11 @@ export default function Checkout() {
           <AddressPicker addresses={addresses} value={addressId} onChange={setAddressId} />
         )}
         {step === 1 && <ShippingStep shipping={shipping} uf={uf} onRetry={shipping.refetch} />}
-        {step === 2 && <PaymentPicker value={paymentMethod} onChange={setPaymentMethod} />}
-        {step === 3 && (
+        {step === 2 && (
           <>
             <OrderReview
               items={items}
               address={selectedAddress}
-              paymentMethod={paymentMethod}
               shipping={shipping.data}
               coupon={coupon}
             />
@@ -158,7 +194,7 @@ export default function Checkout() {
         >
           Voltar
         </Button>
-        {step < 3 ? (
+        {step < 2 ? (
           <Button onClick={() => setStep((s) => s + 1)} disabled={!canContinue}>
             Continuar
           </Button>
@@ -166,9 +202,9 @@ export default function Checkout() {
           <Button
             onClick={handleConfirm}
             loading={placing}
-            disabled={addressId == null || !paymentMethod || !shippingReady}
+            disabled={addressId == null || !shippingReady}
           >
-            Confirmar pedido
+            Ir para o pagamento
           </Button>
         )}
       </div>

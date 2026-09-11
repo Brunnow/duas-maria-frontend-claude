@@ -44,12 +44,14 @@ export default function OrderConfirmation({ order }) {
         </div>
       </div>
 
-      <p className="mt-4 text-xs text-muted">
-        O histórico de pedidos ainda não está disponível na sua conta.
-      </p>
-      <Button as={Link} to="/produtos" className="mt-6">
-        Continuar comprando
-      </Button>
+      <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <Button as={Link} to={`/pedidos/${order.orderId}`} variant="secondary">
+          Ver detalhes do pedido
+        </Button>
+        <Button as={Link} to="/produtos">
+          Continuar comprando
+        </Button>
+      </div>
     </div>
   );
 }

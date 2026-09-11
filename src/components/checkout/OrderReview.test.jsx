@@ -9,15 +9,7 @@ const shipping = { shippingAmount: 14.9, shippingMethod: 'FIXED_UF' };
 
 describe('OrderReview', () => {
   it('sem cupom: A pagar = produtos + frete, sem linha de desconto', () => {
-    render(
-      <OrderReview
-        items={items}
-        address={null}
-        paymentMethod="pix-qr"
-        shipping={shipping}
-        coupon={null}
-      />,
-    );
+    render(<OrderReview items={items} address={null} shipping={shipping} coupon={null} />);
 
     // 200 + 14,90
     expect(screen.getByText(/R\$\s*214,90/)).toBeInTheDocument();
@@ -29,7 +21,6 @@ describe('OrderReview', () => {
       <OrderReview
         items={items}
         address={null}
-        paymentMethod="pix-qr"
         shipping={shipping}
         coupon={{ code: 'PROMO10', discountAmount: 20 }}
       />,
@@ -45,7 +36,6 @@ describe('OrderReview', () => {
       <OrderReview
         items={items}
         address={null}
-        paymentMethod="pix-qr"
         shipping={shipping}
         coupon={{ code: 'BIG', discountAmount: 500 }}
       />,
