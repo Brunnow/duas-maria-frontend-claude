@@ -7,12 +7,20 @@ import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import { useFetch } from '@/hooks/useFetch';
-import { getOrder, updateOrderStatus } from '@/services/adminOrderService';
+import { getOrder, retryRefund, updateOrderStatus } from '@/services/adminOrderService';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { orderStatusLabel, orderStatusTone } from '@/lib/orderStatus';
+import { paymentStatusLabel, paymentStatusTone } from '@/lib/paymentStatus';
 import { shippingMethodLabel } from '@/lib/shipping';
 import { productImageUrl } from '@/lib/media';
 import { addressLines } from '@/lib/address';
+
+const WEBHOOK_EVENT_STATUS_LABEL = {
+  RECEIVED: 'Recebido',
+  PROCESSED: 'Processado',
+  FAILED: 'Falhou',
+  IGNORED: 'Ignorado',
+};
 
 function getOrderOrFriendlyNotFound(orderId) {
   return getOrder(orderId).catch((err) => {
@@ -35,6 +43,22 @@ export default function AdminPedidoDetalhe() {
   const [submitting, setSubmitting] = useState(false);
   const [changeError, setChangeError] = useState(null);
   const [changeOk, setChangeOk] = useState(null);
+
+  const [refunding, setRefunding] = useState(false);
+  const [refundError, setRefundError] = useState(null);
+
+  const submitRetryRefund = async () => {
+    setRefunding(true);
+    setRefundError(null);
+    try {
+      await retryRefund(id);
+      refetch();
+    } catch (err) {
+      setRefundError(err?.response?.data?.message || 'Não foi possível tentar o estorno agora.');
+    } finally {
+      setRefunding(false);
+    }
+  };
 
   const submitStatus = async (event) => {
     event.preventDefault();
@@ -60,6 +84,8 @@ export default function AdminPedidoDetalhe() {
   const order = detail?.order;
   const nextOptions = detail?.allowedNextStatus || [];
   const history = detail?.statusHistory || [];
+  const payment = order?.payment;
+  const webhookEvents = detail?.webhookEvents || [];
 
   return (
     <div>
@@ -180,6 +206,47 @@ export default function AdminPedidoDetalhe() {
                 </section>
               )}
 
+              {payment && (
+                <section className="text-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                    Pagamento
+                  </p>
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    <Badge tone={paymentStatusTone(payment.status)} className="w-fit">
+                      {paymentStatusLabel(payment.status)}
+                    </Badge>
+                    <div className="text-muted">
+                      {payment.provider && <p>Provedor: {payment.provider}</p>}
+                      {payment.providerPaymentId && (
+                        <p>Id do pagamento: {payment.providerPaymentId}</p>
+                      )}
+                      {payment.amount != null && <p>Valor: {formatCurrency(payment.amount)}</p>}
+                      {payment.paidAt && <p>Pago em: {formatDateTime(payment.paidAt)}</p>}
+                      {payment.refundedAt && (
+                        <p>Estornado em: {formatDateTime(payment.refundedAt)}</p>
+                      )}
+                    </div>
+                    {payment.status === 'REFUND_PENDING' && (
+                      <div className="mt-1">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          loading={refunding}
+                          onClick={submitRetryRefund}
+                        >
+                          Tentar estorno novamente
+                        </Button>
+                        {refundError && (
+                          <p role="alert" className="mt-1.5 text-xs text-danger">
+                            {refundError}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
               <section className="text-sm">
                 <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
                   Alterar status
@@ -254,6 +321,24 @@ export default function AdminPedidoDetalhe() {
                   ))}
                 </ol>
               </section>
+
+              {webhookEvents.length > 0 && (
+                <section className="text-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                    Eventos de webhook
+                  </p>
+                  <ol className="mt-2 space-y-2 text-xs text-muted">
+                    {webhookEvents.map((e) => (
+                      <li key={e.id}>
+                        <span className="text-foreground">{e.topic}</span> ·{' '}
+                        {WEBHOOK_EVENT_STATUS_LABEL[e.status] || e.status} ·{' '}
+                        {formatDateTime(e.receivedAt)}
+                        {e.error && <span className="block text-danger">{e.error}</span>}
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
             </aside>
           </div>
         </>

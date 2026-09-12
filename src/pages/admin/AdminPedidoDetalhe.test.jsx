@@ -8,9 +8,10 @@ vi.mock('@/services/adminOrderService', () => ({
   listOrders: vi.fn(),
   getOrder: vi.fn(),
   updateOrderStatus: vi.fn(),
+  retryRefund: vi.fn(),
 }));
 
-import { getOrder, updateOrderStatus } from '@/services/adminOrderService';
+import { getOrder, retryRefund, updateOrderStatus } from '@/services/adminOrderService';
 import AdminPedidoDetalhe from './AdminPedidoDetalhe';
 
 function renderAt(id) {
@@ -70,6 +71,7 @@ const detail = (overrides = {}) => {
       },
     ],
     allowedNextStatus: ['SEPARANDO', 'CANCELADO'],
+    webhookEvents: [],
     ...rest,
   };
 };
@@ -146,5 +148,77 @@ describe('AdminPedidoDetalhe', () => {
     await screen.findByRole('heading', { name: 'Pedido #77' });
     expect(screen.getByText(/status final e não pode ser alterado/)).toBeInTheDocument();
     expect(screen.queryByLabelText('Novo status')).not.toBeInTheDocument();
+  });
+
+  it('mostra o status e os dados do pagamento Mercado Pago', async () => {
+    getOrder.mockResolvedValue(
+      detail({
+        order: {
+          payment: {
+            status: 'APPROVED',
+            provider: 'MERCADO_PAGO',
+            providerPaymentId: 'mp-123',
+            amount: 199.9,
+            paidAt: '2026-02-10T14:05:00',
+          },
+        },
+      }),
+    );
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    expect(screen.getByText('Aprovado')).toBeInTheDocument();
+    expect(screen.getByText('Provedor: MERCADO_PAGO')).toBeInTheDocument();
+    expect(screen.getByText('Id do pagamento: mp-123')).toBeInTheDocument();
+  });
+
+  it('pagamento em estorno pendente mostra botão de tentar de novo', async () => {
+    getOrder.mockResolvedValueOnce(
+      detail({
+        order: {
+          payment: {
+            status: 'REFUND_PENDING',
+            provider: 'MERCADO_PAGO',
+            providerPaymentId: 'mp-123',
+          },
+        },
+      }),
+    );
+    getOrder.mockResolvedValue(
+      detail({
+        order: {
+          payment: { status: 'REFUNDED', provider: 'MERCADO_PAGO', providerPaymentId: 'mp-123' },
+        },
+      }),
+    );
+    retryRefund.mockResolvedValue({});
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar estorno novamente' }));
+
+    await waitFor(() => expect(retryRefund).toHaveBeenCalledWith('77'));
+    expect(await screen.findByText('Estornado')).toBeInTheDocument();
+  });
+
+  it('mostra a timeline de eventos de webhook quando houver', async () => {
+    getOrder.mockResolvedValue(
+      detail({
+        webhookEvents: [
+          {
+            id: 1,
+            topic: 'payment',
+            status: 'PROCESSED',
+            receivedAt: '2026-02-10T14:05:00',
+            error: null,
+          },
+        ],
+      }),
+    );
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    expect(screen.getByText('Eventos de webhook')).toBeInTheDocument();
+    expect(screen.getByText(/Processado/)).toBeInTheDocument();
   });
 });

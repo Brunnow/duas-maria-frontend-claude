@@ -10,6 +10,8 @@ import api from '@/api/api';
  *   GET   /api/admin/orders/{id}       -> 200 AdminOrderDetailDTO | 404
  *   PATCH /api/admin/orders/{id}/status { status, note? }
  *         -> 200 AdminOrderDetailDTO | 400 status inválido | 404 | 409 transição
+ *   POST  /api/admin/orders/{id}/refund
+ *         -> 200 AdminOrderDetailDTO | 404 | 409 pagamento não está em REFUND_PENDING
  */
 
 /**
@@ -33,5 +35,11 @@ export function getOrder(orderId) {
 export function updateOrderStatus(orderId, { status, note }) {
   return api
     .patch(`/admin/orders/${encodeURIComponent(orderId)}/status`, { status, note })
+    .then((response) => response.data);
+}
+
+export function retryRefund(orderId) {
+  return api
+    .post(`/admin/orders/${encodeURIComponent(orderId)}/refund`)
     .then((response) => response.data);
 }
