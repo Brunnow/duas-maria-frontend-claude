@@ -11,7 +11,7 @@ import { getOrder, retryRefund, updateOrderStatus } from '@/services/adminOrderS
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { orderStatusLabel, orderStatusTone } from '@/lib/orderStatus';
 import { paymentStatusLabel, paymentStatusTone } from '@/lib/paymentStatus';
-import { shippingMethodLabel } from '@/lib/shipping';
+import { shippingOptionLabel } from '@/lib/shipping';
 import { productImageUrl } from '@/lib/media';
 import { addressLines } from '@/lib/address';
 
@@ -169,7 +169,13 @@ export default function AdminPedidoDetalhe() {
                   )}
                   {order.shippingAmount != null && (
                     <div className="flex justify-between text-muted">
-                      <span>Frete · {shippingMethodLabel(order.shippingMethod)}</span>
+                      <span>
+                        Frete ·{' '}
+                        {shippingOptionLabel({
+                          carrierName: order.shippingCarrierName,
+                          serviceName: order.shippingServiceName,
+                        })}
+                      </span>
                       <span>{formatCurrency(order.shippingAmount)}</span>
                     </div>
                   )}

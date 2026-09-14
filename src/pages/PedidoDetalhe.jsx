@@ -10,7 +10,7 @@ import { useFetch } from '@/hooks/useFetch';
 import { fetchOrderById } from '@/services/orderService';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { orderStatusLabel, orderStatusTone } from '@/lib/orderStatus';
-import { shippingMethodLabel } from '@/lib/shipping';
+import { shippingOptionLabel } from '@/lib/shipping';
 import { productImageUrl } from '@/lib/media';
 import { addressLines } from '@/lib/address';
 
@@ -126,7 +126,13 @@ export default function PedidoDetalhe() {
               )}
               {order.shippingAmount != null && (
                 <div className="flex justify-between text-muted">
-                  <span>Frete · {shippingMethodLabel(order.shippingMethod)}</span>
+                  <span>
+                    Frete ·{' '}
+                    {shippingOptionLabel({
+                      carrierName: order.shippingCarrierName,
+                      serviceName: order.shippingServiceName,
+                    })}
+                  </span>
                   <span>{formatCurrency(order.shippingAmount)}</span>
                 </div>
               )}

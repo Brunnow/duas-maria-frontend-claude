@@ -12,7 +12,7 @@ import { useFetch } from '@/hooks/useFetch';
 import { selectCartItems } from '@/features/cart/cartSlice';
 import { fetchAddresses, selectAddresses } from '@/features/address/addressSlice';
 import { createOrder, startMercadoPagoPayment } from '@/services/orderService';
-import { quoteShipping } from '@/services/shippingService';
+import { getShippingOptions } from '@/services/shippingService';
 import { goToExternal } from '@/lib/navigate';
 
 const STEPS = ['Endereço', 'Frete', 'Revisão'];
@@ -30,6 +30,7 @@ export default function Checkout() {
 
   const [step, setStep] = useState(0);
   const [addressId, setAddressId] = useState(null);
+  const [shippingServiceId, setShippingServiceId] = useState(null);
   const [coupon, setCoupon] = useState(null); // { code, discountAmount } | null
   const [placing, setPlacing] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -45,21 +46,37 @@ export default function Checkout() {
 
   const selectedAddress = addresses.find((a) => a.addressId === addressId);
   const uf = selectedAddress?.state || null;
+  const cep = selectedAddress?.pincode || null;
 
-  // Cotação de frete pela UF do endereço selecionado. O backend recalcula
-  // na criação do pedido; este valor é informativo para a revisão.
+  // Cotação de frete pelo CEP/UF do endereço selecionado (Fase ME3). O
+  // backend recota tudo de novo na criação do pedido; esta lista é só para o
+  // cliente escolher a modalidade.
   const shippingFetcher = useCallback(() => {
-    if (!uf) return Promise.resolve(null);
-    return quoteShipping(uf).catch((err) => {
+    if (!cep || !uf) return Promise.resolve(null);
+    return getShippingOptions({ cep, uf }).catch((err) => {
       const data = err?.response?.data;
       const msg =
-        data?.uf || data?.message || 'Não foi possível calcular o frete para este endereço.';
+        data?.cep ||
+        data?.uf ||
+        data?.message ||
+        'Não foi possível calcular o frete para este endereço.';
       const normalized = new Error(msg);
       normalized.response = { data: { message: msg } };
       throw normalized;
     });
-  }, [uf]);
-  const shipping = useFetch(shippingFetcher, [uf]);
+  }, [cep, uf]);
+  const shipping = useFetch(shippingFetcher, [cep, uf]);
+
+  // Pré-seleciona a primeira opção (mais barata, já que o backend devolve
+  // nessa ordem) sempre que a escolha do cliente não estiver mais na lista
+  // atual (primeira carga, ou endereço trocado e a opção escolhida sumiu).
+  // Derivado no render, sem efeito: nada de corrida entre a cotação chegar e
+  // o botão "Continuar" já refletir a seleção.
+  const options = shipping.data || [];
+  const effectiveShippingServiceId = options.some((o) => o.serviceId === shippingServiceId)
+    ? shippingServiceId
+    : (options[0]?.serviceId ?? null);
+  const selectedShippingOption = options.find((o) => o.serviceId === effectiveShippingServiceId);
 
   // Carrinho vazio e nenhum pedido pendente de pagamento -> volta para o carrinho.
   if (!pendingOrder && items.length === 0) {
@@ -102,7 +119,7 @@ export default function Checkout() {
     );
   }
 
-  const shippingReady = shipping.status === 'ready' && shipping.data != null;
+  const shippingReady = shipping.status === 'ready' && selectedShippingOption != null;
   const canContinue =
     (step === 0 && addressId != null) || (step === 1 && shippingReady) || step === 2;
 
@@ -114,6 +131,7 @@ export default function Checkout() {
       const { order, initPoint, paymentInitFailed } = await createOrder({
         addressId,
         couponCode: coupon?.code,
+        shippingServiceId: effectiveShippingServiceId,
       });
       if (paymentInitFailed || !initPoint) {
         setPendingOrder(order);
@@ -129,6 +147,11 @@ export default function Checkout() {
       } else if (status === 400 || status === 404 || status === 409) {
         // inclui cupom recusado no fechamento (inválido -> 400, limite -> 409)
         setError(data?.message || 'Não foi possível finalizar o pedido.');
+        if (data?.message?.includes('frete escolhido')) {
+          // opção escolhida ficou indisponível entre a cotação e a confirmação
+          // -> recota, para o cliente poder escolher de novo em vez de travar
+          shipping.refetch();
+        }
       } else {
         setError('Não foi possível finalizar o pedido. Tente novamente.');
       }
@@ -146,13 +169,21 @@ export default function Checkout() {
         {step === 0 && (
           <AddressPicker addresses={addresses} value={addressId} onChange={setAddressId} />
         )}
-        {step === 1 && <ShippingStep shipping={shipping} uf={uf} onRetry={shipping.refetch} />}
+        {step === 1 && (
+          <ShippingStep
+            shipping={shipping}
+            uf={uf}
+            selectedServiceId={effectiveShippingServiceId}
+            onSelect={setShippingServiceId}
+            onRetry={shipping.refetch}
+          />
+        )}
         {step === 2 && (
           <>
             <OrderReview
               items={items}
               address={selectedAddress}
-              shipping={shipping.data}
+              shipping={selectedShippingOption}
               coupon={coupon}
             />
             <CouponField value={coupon} onApply={setCoupon} onRemove={() => setCoupon(null)} />

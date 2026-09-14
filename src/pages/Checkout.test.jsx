@@ -8,7 +8,7 @@ vi.mock('@/services/orderService', () => ({
   createOrder: vi.fn(),
   startMercadoPagoPayment: vi.fn(),
 }));
-vi.mock('@/services/shippingService', () => ({ quoteShipping: vi.fn() }));
+vi.mock('@/services/shippingService', () => ({ getShippingOptions: vi.fn() }));
 vi.mock('@/services/couponService', () => ({ validateCoupon: vi.fn() }));
 vi.mock('@/services/addressService', () => ({
   getUserAddresses: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock('@/lib/navigate', () => ({ goToExternal: vi.fn() }));
 import { getUserAddresses } from '@/services/addressService';
 
 import { createOrder, startMercadoPagoPayment } from '@/services/orderService';
-import { quoteShipping } from '@/services/shippingService';
+import { getShippingOptions } from '@/services/shippingService';
 import { validateCoupon } from '@/services/couponService';
 import { goToExternal } from '@/lib/navigate';
 import Checkout from './Checkout';
@@ -83,7 +83,15 @@ const goThroughSteps = async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  quoteShipping.mockResolvedValue({ shippingAmount: 14.9, shippingMethod: 'FIXED_UF' });
+  getShippingOptions.mockResolvedValue([
+    {
+      serviceId: 'FIXED_UF',
+      carrierName: null,
+      serviceName: 'Entrega padrão',
+      price: 14.9,
+      deliveryDays: null,
+    },
+  ]);
 });
 
 describe('Checkout', () => {
@@ -92,18 +100,46 @@ describe('Checkout', () => {
     expect(screen.getByText('Pagina do carrinho')).toBeInTheDocument();
   });
 
-  it('cota o frete pela UF do endereco e soma produtos + frete na revisao', async () => {
+  it('cota o frete pelo CEP/UF do endereco e soma produtos + frete na revisao', async () => {
     renderCheckout();
     await goThroughSteps();
 
-    await waitFor(() => expect(quoteShipping).toHaveBeenCalledWith('PE'));
+    await waitFor(() =>
+      expect(getShippingOptions).toHaveBeenCalledWith({ cep: '50000-000', uf: 'PE' }),
+    );
     // Produtos 259,90 + Frete 14,90 = 274,80
     expect(await screen.findByText(/R\$\s*274,80/)).toBeInTheDocument();
     expect(screen.getByText(/Entrega padrão/)).toBeInTheDocument();
   });
 
+  it('mostra multiplas opcoes de frete e deixa o cliente trocar', async () => {
+    getShippingOptions.mockResolvedValueOnce([
+      { serviceId: '1', carrierName: 'Correios', serviceName: 'PAC', price: 27.6, deliveryDays: 7 },
+      {
+        serviceId: '2',
+        carrierName: 'Correios',
+        serviceName: 'SEDEX',
+        price: 62.32,
+        deliveryDays: 3,
+      },
+    ]);
+    renderCheckout();
+
+    fireEvent.click(screen.getByRole('radio', { name: /Rua das Flores/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    expect(await screen.findByText(/R\$\s*27,60/)).toBeInTheDocument();
+    expect(screen.getByText(/R\$\s*62,32/)).toBeInTheDocument();
+
+    // pré-seleciona a primeira opção (PAC); troca pra SEDEX e segue pra revisão
+    fireEvent.click(screen.getByRole('radio', { name: /SEDEX/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    expect(await screen.findByText(/Correios · SEDEX/)).toBeInTheDocument();
+  });
+
   it('mostra erro de cotacao e permite tentar de novo', async () => {
-    quoteShipping.mockRejectedValueOnce({ response: { data: { uf: 'UF inválida' } } });
+    getShippingOptions.mockRejectedValueOnce({ response: { data: { uf: 'UF inválida' } } });
     renderCheckout();
 
     fireEvent.click(screen.getByRole('radio', { name: /Rua das Flores/ }));
@@ -113,7 +149,15 @@ describe('Checkout', () => {
     // Continuar fica desabilitado enquanto o frete nao cotou
     expect(screen.getByRole('button', { name: 'Continuar' })).toBeDisabled();
 
-    quoteShipping.mockResolvedValueOnce({ shippingAmount: 14.9, shippingMethod: 'FIXED_UF' });
+    getShippingOptions.mockResolvedValueOnce([
+      {
+        serviceId: 'FIXED_UF',
+        carrierName: null,
+        serviceName: 'Entrega padrão',
+        price: 14.9,
+        deliveryDays: null,
+      },
+    ]);
     fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
     expect(await screen.findByText(/R\$\s*14,90/)).toBeInTheDocument();
   });
@@ -130,7 +174,11 @@ describe('Checkout', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ir para o pagamento' }));
 
     await waitFor(() =>
-      expect(createOrder).toHaveBeenCalledWith({ addressId: 1, couponCode: undefined }),
+      expect(createOrder).toHaveBeenCalledWith({
+        addressId: 1,
+        couponCode: undefined,
+        shippingServiceId: 'FIXED_UF',
+      }),
     );
     await waitFor(() =>
       expect(goToExternal).toHaveBeenCalledWith(
@@ -165,7 +213,11 @@ describe('Checkout', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ir para o pagamento' }));
 
     await waitFor(() =>
-      expect(createOrder).toHaveBeenCalledWith({ addressId: 1, couponCode: 'PROMO10' }),
+      expect(createOrder).toHaveBeenCalledWith({
+        addressId: 1,
+        couponCode: 'PROMO10',
+        shippingServiceId: 'FIXED_UF',
+      }),
     );
   });
 

@@ -5,7 +5,13 @@ import OrderReview from './OrderReview';
 const items = [
   { cartItemId: 1, productName: 'Vestido Midi', size: 'M', quantity: 1, lineTotal: 200, image: '' },
 ];
-const shipping = { shippingAmount: 14.9, shippingMethod: 'FIXED_UF' };
+const shipping = {
+  serviceId: 'FIXED_UF',
+  carrierName: null,
+  serviceName: 'Entrega padrão',
+  price: 14.9,
+  deliveryDays: null,
+};
 
 describe('OrderReview', () => {
   it('sem cupom: A pagar = produtos + frete, sem linha de desconto', () => {
@@ -29,6 +35,25 @@ describe('OrderReview', () => {
     expect(screen.getByText(/Desconto.*PROMO10/)).toBeInTheDocument();
     // 200 - 20 + 14,90
     expect(screen.getByText(/R\$\s*194,90/)).toBeInTheDocument();
+  });
+
+  it('mostra transportadora e servico quando o frete e uma opcao real do Melhor Envio', () => {
+    render(
+      <OrderReview
+        items={items}
+        address={null}
+        shipping={{
+          serviceId: '1',
+          carrierName: 'Correios',
+          serviceName: 'PAC',
+          price: 27.6,
+          deliveryDays: 7,
+        }}
+        coupon={null}
+      />,
+    );
+
+    expect(screen.getByText(/Correios · PAC/)).toBeInTheDocument();
   });
 
   it('nunca deixa o desconto passar do subtotal de produtos', () => {

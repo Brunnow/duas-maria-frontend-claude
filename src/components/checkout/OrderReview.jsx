@@ -1,11 +1,11 @@
 import { formatCurrency } from '@/lib/format';
 import { addressLines } from '@/lib/address';
-import { shippingMethodLabel } from '@/lib/shipping';
+import { shippingOptionLabel } from '@/lib/shipping';
 
 export default function OrderReview({ items, address, shipping, coupon }) {
   const productsTotal = items.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
   const count = items.reduce((n, item) => n + (item.quantity || 0), 0);
-  const shippingAmount = Number(shipping?.shippingAmount) || 0;
+  const shippingAmount = Number(shipping?.price) || 0;
   // Preview: o backend recalcula o desconto ao criar o pedido.
   const discount = Math.min(Number(coupon?.discountAmount) || 0, productsTotal);
   const total = productsTotal - discount + shippingAmount;
@@ -77,8 +77,7 @@ export default function OrderReview({ items, address, shipping, coupon }) {
         )}
         <div className="mt-2 flex items-center justify-between text-sm">
           <span className="text-muted">
-            Frete
-            {shipping?.shippingMethod ? ` · ${shippingMethodLabel(shipping.shippingMethod)}` : ''}
+            Frete{shipping ? ` · ${shippingOptionLabel(shipping)}` : ''}
           </span>
           <span className="text-foreground">{formatCurrency(shippingAmount)}</span>
         </div>

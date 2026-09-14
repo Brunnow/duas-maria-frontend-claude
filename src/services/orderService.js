@@ -3,7 +3,7 @@ import api from '@/api/api';
 /*
  * Checkout com Mercado Pago (Fase D), exige auth:
  *   POST /api/orders
- *   body CreateOrderRequest { addressId, paymentMethod, couponCode? }
+ *   body CreateOrderRequest { addressId, paymentMethod, couponCode?, shippingServiceId? }
  *   -> 201 CreateOrderResponse { order: OrderDTO, initPoint, paymentInitFailed }
  *
  * Cria o pedido AGUARDANDO_PAGAMENTO (sem tocar estoque/carrinho — só o
@@ -11,12 +11,23 @@ import api from '@/api/api';
  * falhar na hora (`paymentInitFailed: true`), o pedido fica salvo mesmo assim
  * e o cliente pode tentar de novo com startMercadoPagoPayment.
  * Erros: 409 OutOfStockResponse { message, unavailableItems[] },
- *        400 "Cart is empty" / cupom inválido, 404 Address, 409 limite do cupom.
- * O cupom é só o código: o backend valida e calcula o desconto (nunca confia
- * num valor vindo daqui).
+ *        400 "Cart is empty" / cupom inválido, 404 Address, 409 limite do cupom,
+ *        400 "O frete escolhido não está mais disponível. Cote novamente."
+ * O cupom é só o código e o frete é só o `serviceId` escolhido (Fase ME3): o
+ * backend valida/recota tudo e nunca confia num valor vindo daqui.
  */
-export function createOrder({ addressId, paymentMethod = 'mercadopago', couponCode }) {
-  const body = { addressId, paymentMethod, couponCode: couponCode || undefined };
+export function createOrder({
+  addressId,
+  paymentMethod = 'mercadopago',
+  couponCode,
+  shippingServiceId,
+}) {
+  const body = {
+    addressId,
+    paymentMethod,
+    couponCode: couponCode || undefined,
+    shippingServiceId: shippingServiceId ?? undefined,
+  };
   return api.post('/orders', body).then((response) => response.data);
 }
 
