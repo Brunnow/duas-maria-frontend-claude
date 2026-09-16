@@ -68,6 +68,9 @@ describe('Conta', () => {
       target: { value: 'Maria da Silva' },
     });
     fireEvent.change(screen.getByLabelText('Telefone'), { target: { value: '(81) 91234-5678' } });
+    fireEvent.change(screen.getByLabelText('CPF de quem vai receber'), {
+      target: { value: '123.456.789-01' },
+    });
     fireEvent.change(screen.getByLabelText('CEP'), { target: { value: '53000-000' } });
     fireEvent.change(screen.getByLabelText('Logradouro'), {
       target: { value: 'Rua Nova das Casas' },

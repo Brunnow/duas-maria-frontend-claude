@@ -3,16 +3,18 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { pattern, required, validateForm } from '@/lib/validation';
-import { UFS, cepDigits, formatCep } from '@/lib/br';
+import { UFS, cepDigits, formatCep, formatCpf } from '@/lib/br';
 import { lookupCep } from '@/services/viaCep';
 
 const CEP_RE = /^\d{5}-?\d{3}$/;
 const PHONE_RE = /^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/;
+const CPF_RE = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/;
 
 // Espelha o AddressDTO do backend. `country` não entra: o backend assume "Brasil".
 const FIELD_KEYS = [
   'recipientName',
   'phone',
+  'document',
   'pincode',
   'street',
   'number',
@@ -27,6 +29,7 @@ const EMPTY = Object.fromEntries(FIELD_KEYS.map((k) => [k, '']));
 const schema = {
   recipientName: [required('Informe quem vai receber')],
   phone: [required('Informe um telefone'), pattern(PHONE_RE, 'Telefone inválido')],
+  document: [required('Informe o CPF de quem vai receber'), pattern(CPF_RE, 'CPF inválido')],
   pincode: [required('Informe o CEP'), pattern(CEP_RE, 'CEP inválido (ex.: 50000-000)')],
   street: [required('Informe o logradouro')],
   number: [required('Informe o número (use "s/n" se não houver)')],
@@ -39,6 +42,7 @@ function pickFields(address) {
   if (!address) return {};
   const picked = FIELD_KEYS.reduce((acc, k) => ({ ...acc, [k]: address[k] ?? '' }), {});
   if (picked.pincode) picked.pincode = formatCep(picked.pincode);
+  if (picked.document) picked.document = formatCpf(picked.document);
   return picked;
 }
 
@@ -54,6 +58,8 @@ export default function AddressForm({ initial, onSubmit, onCancel, submitting = 
   };
 
   const handleChange = (event) => setField(event.target.name, event.target.value);
+
+  const handleDocumentChange = (event) => setField('document', formatCpf(event.target.value));
 
   const handleCepChange = async (event) => {
     const formatted = formatCep(event.target.value);
@@ -148,6 +154,15 @@ export default function AddressForm({ initial, onSubmit, onCancel, submitting = 
         value={values.number}
         onChange={handleChange}
         error={errors.number}
+      />
+      <Input
+        label="CPF de quem vai receber"
+        name="document"
+        inputMode="numeric"
+        placeholder="123.456.789-01"
+        value={values.document}
+        onChange={handleDocumentChange}
+        error={errors.document}
       />
       <Input
         label="Complemento"

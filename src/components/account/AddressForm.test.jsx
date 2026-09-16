@@ -15,6 +15,7 @@ const fill = (label, value) =>
 const fillAll = () => {
   fill('Nome de quem vai receber', 'Maria da Silva');
   fill('Telefone', '(81) 91234-5678');
+  fill('CPF de quem vai receber', '123.456.789-01');
   fill('CEP', '50000-000');
   fill('Logradouro', 'Rua das Flores');
   fill('Número', '123');
@@ -49,6 +50,19 @@ describe('AddressForm', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it('rejeita CPF em formato invalido, e formata enquanto digita', () => {
+    const onSubmit = vi.fn();
+    render(<AddressForm onSubmit={onSubmit} onCancel={() => {}} />);
+    fillAll();
+    fill('CPF de quem vai receber', '123');
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar endereço' }));
+    expect(screen.getByText('CPF inválido')).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    fill('CPF de quem vai receber', '12345678901');
+    expect(screen.getByLabelText('CPF de quem vai receber')).toHaveValue('123.456.789-01');
+  });
+
   it('envia o payload no formato do AddressDTO quando valido', () => {
     const onSubmit = vi.fn();
     render(<AddressForm onSubmit={onSubmit} onCancel={() => {}} />);
@@ -58,6 +72,7 @@ describe('AddressForm', () => {
     expect(onSubmit).toHaveBeenCalledWith({
       recipientName: 'Maria da Silva',
       phone: '(81) 91234-5678',
+      document: '123.456.789-01',
       pincode: '50000-000',
       street: 'Rua das Flores',
       number: '123',
