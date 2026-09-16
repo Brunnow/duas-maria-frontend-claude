@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { adminAuth, makeStore } from '@/test/renderWithProviders';
 
 vi.mock('@/services/adminOrderService', () => ({
@@ -9,9 +9,15 @@ vi.mock('@/services/adminOrderService', () => ({
   getOrder: vi.fn(),
   updateOrderStatus: vi.fn(),
   retryRefund: vi.fn(),
+  updateOrderTracking: vi.fn(),
 }));
 
-import { getOrder, retryRefund, updateOrderStatus } from '@/services/adminOrderService';
+import {
+  getOrder,
+  retryRefund,
+  updateOrderStatus,
+  updateOrderTracking,
+} from '@/services/adminOrderService';
 import AdminPedidoDetalhe from './AdminPedidoDetalhe';
 
 function renderAt(id) {
@@ -22,6 +28,30 @@ function renderAt(id) {
         <Routes>
           <Route path="/admin/pedidos/:id" element={<AdminPedidoDetalhe />} />
           <Route path="/admin/pedidos" element={<div>Lista admin</div>} />
+        </Routes>
+      </MemoryRouter>
+    </Provider>,
+  );
+}
+
+// Navega entre dois pedidos SEM desmontar o componente (mesmo padrão de rota
+// que o app usa de verdade — /admin/pedidos/:id só troca o param, o React
+// Router não remonta sozinho).
+function renderWithNavigationBetween(idA, idB) {
+  const store = makeStore(adminAuth);
+  render(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={[`/admin/pedidos/${idA}`]}>
+        <Routes>
+          <Route
+            path="/admin/pedidos/:id"
+            element={
+              <>
+                <Link to={`/admin/pedidos/${idB}`}>ir pro outro pedido</Link>
+                <AdminPedidoDetalhe />
+              </>
+            }
+          />
         </Routes>
       </MemoryRouter>
     </Provider>,
@@ -199,6 +229,106 @@ describe('AdminPedidoDetalhe', () => {
 
     await waitFor(() => expect(retryRefund).toHaveBeenCalledWith('77'));
     expect(await screen.findByText('Estornado')).toBeInTheDocument();
+  });
+
+  // ---------- Fase ME7-lite: rastreio ----------
+
+  it('pedido pago sem codigo de rastreio mostra o formulario pra cadastrar', async () => {
+    getOrder.mockResolvedValueOnce(detail());
+    getOrder.mockResolvedValue(
+      detail({ order: { shippingTrackingCode: 'BR123456789BR', melhorEnvioStatus: 'posted' } }),
+    );
+    updateOrderTracking.mockResolvedValue({});
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    expect(screen.getByLabelText('Código de rastreio')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Código de rastreio'), {
+      target: { value: 'BR123456789BR' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar rastreio' }));
+
+    await waitFor(() => expect(updateOrderTracking).toHaveBeenCalledWith('77', 'BR123456789BR'));
+    expect(await screen.findByText('Postado')).toBeInTheDocument();
+    expect(screen.getByText('Código: BR123456789BR')).toBeInTheDocument();
+  });
+
+  it('pedido com rastreio ja registrado mostra status e permite corrigir o codigo', async () => {
+    getOrder.mockResolvedValue(
+      detail({
+        order: {
+          shippingTrackingCode: 'BR123456789BR',
+          melhorEnvioStatus: 'delivered',
+          shippingDeliveredAt: '2026-02-15T10:00:00',
+        },
+      }),
+    );
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    expect(screen.getByText('Entregue')).toBeInTheDocument();
+    expect(screen.getByText(/Entregue em:/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Código de rastreio')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Corrigir código' }));
+
+    expect(screen.getByLabelText('Código de rastreio')).toHaveValue('BR123456789BR');
+  });
+
+  it('trocar de pedido (so o :id muda, sem remontar) limpa o formulario de rastreio do pedido anterior', async () => {
+    getOrder.mockImplementation((id) =>
+      Promise.resolve(
+        Number(id) === 77
+          ? detail({
+              order: { shippingTrackingCode: 'BR123456789BR', melhorEnvioStatus: 'posted' },
+            })
+          : detail({ order: { orderId: 78, shippingTrackingCode: null } }),
+      ),
+    );
+    renderWithNavigationBetween(77, 78);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    fireEvent.click(screen.getByRole('button', { name: 'Corrigir código' }));
+    expect(screen.getByLabelText('Código de rastreio')).toHaveValue('BR123456789BR');
+
+    fireEvent.click(screen.getByRole('link', { name: 'ir pro outro pedido' }));
+
+    await screen.findByRole('heading', { name: 'Pedido #78' });
+    // Pedido 78 nao tem codigo ainda -> formulario tem que estar vazio, nao
+    // com o codigo que sobrou do pedido 77.
+    expect(screen.getByLabelText('Código de rastreio')).toHaveValue('');
+  });
+
+  it('pedido aguardando pagamento nao mostra secao de rastreio', async () => {
+    getOrder.mockResolvedValue(
+      detail({
+        order: { orderStatus: 'AGUARDANDO_PAGAMENTO' },
+        allowedNextStatus: ['PAGO', 'CANCELADO'],
+      }),
+    );
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    expect(screen.queryByText('Rastreio')).not.toBeInTheDocument();
+  });
+
+  it('erro ao salvar rastreio mostra a mensagem do backend', async () => {
+    getOrder.mockResolvedValue(detail());
+    updateOrderTracking.mockRejectedValue({
+      response: { data: { message: 'Só é possível registrar rastreio para um pedido pago.' } },
+    });
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    fireEvent.change(screen.getByLabelText('Código de rastreio'), {
+      target: { value: 'BR123456789BR' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar rastreio' }));
+
+    expect(
+      await screen.findByText('Só é possível registrar rastreio para um pedido pago.'),
+    ).toBeInTheDocument();
   });
 
   it('mostra a timeline de eventos de webhook quando houver', async () => {

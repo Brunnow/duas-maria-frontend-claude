@@ -12,6 +12,12 @@ import api from '@/api/api';
  *         -> 200 AdminOrderDetailDTO | 400 status inválido | 404 | 409 transição
  *   POST  /api/admin/orders/{id}/refund
  *         -> 200 AdminOrderDetailDTO | 404 | 409 pagamento não está em REFUND_PENDING
+ *   PATCH /api/admin/orders/{id}/tracking { trackingCode }
+ *         -> 200 AdminOrderDetailDTO | 400 código vazio | 404
+ *            | 409 pedido não pago, já entregue ou cancelado
+ *         (Fase ME7-lite: a etiqueta é comprada manualmente no Melhor Envio,
+ *         fora do sistema — aqui só se registra o código; o backend consulta
+ *         o status na hora e continua consultando sozinho depois.)
  */
 
 /**
@@ -41,5 +47,11 @@ export function updateOrderStatus(orderId, { status, note }) {
 export function retryRefund(orderId) {
   return api
     .post(`/admin/orders/${encodeURIComponent(orderId)}/refund`)
+    .then((response) => response.data);
+}
+
+export function updateOrderTracking(orderId, trackingCode) {
+  return api
+    .patch(`/admin/orders/${encodeURIComponent(orderId)}/tracking`, { trackingCode })
     .then((response) => response.data);
 }

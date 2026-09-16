@@ -88,4 +88,43 @@ describe('PedidoDetalhe', () => {
     await screen.findByRole('heading', { name: 'Pedido #42' });
     expect(screen.queryByText(/Frete/)).not.toBeInTheDocument();
   });
+
+  // ---------- Fase ME7-lite: rastreio ----------
+
+  it('pedido sem codigo de rastreio nao mostra a secao de rastreio', async () => {
+    fetchOrderById.mockResolvedValue(order);
+    renderAt(42);
+
+    await screen.findByRole('heading', { name: 'Pedido #42' });
+    expect(screen.queryByText('Rastreio')).not.toBeInTheDocument();
+  });
+
+  it('pedido postado mostra o rastreio com a data de postagem', async () => {
+    fetchOrderById.mockResolvedValue({
+      ...order,
+      shippingTrackingCode: 'BR123456789BR',
+      melhorEnvioStatus: 'posted',
+      shippingPostedAt: '2026-02-11T09:00:00',
+    });
+    renderAt(42);
+
+    expect(await screen.findByText('Rastreio')).toBeInTheDocument();
+    expect(screen.getByText('Postado')).toBeInTheDocument();
+    expect(screen.getByText('Código: BR123456789BR')).toBeInTheDocument();
+    expect(screen.getByText(/Postado em 11\/02\/2026/)).toBeInTheDocument();
+  });
+
+  it('pedido entregue mostra o rastreio com a data de entrega', async () => {
+    fetchOrderById.mockResolvedValue({
+      ...order,
+      shippingTrackingCode: 'BR123456789BR',
+      melhorEnvioStatus: 'delivered',
+      shippingPostedAt: '2026-02-11T09:00:00',
+      shippingDeliveredAt: '2026-02-15T16:30:00',
+    });
+    renderAt(42);
+
+    expect(await screen.findByText('Entregue', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByText(/Entregue em 15\/02\/2026/)).toBeInTheDocument();
+  });
 });

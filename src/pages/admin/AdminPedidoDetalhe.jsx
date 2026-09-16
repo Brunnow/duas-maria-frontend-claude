@@ -7,11 +7,16 @@ import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import { useFetch } from '@/hooks/useFetch';
-import { getOrder, retryRefund, updateOrderStatus } from '@/services/adminOrderService';
+import {
+  getOrder,
+  retryRefund,
+  updateOrderStatus,
+  updateOrderTracking,
+} from '@/services/adminOrderService';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { orderStatusLabel, orderStatusTone } from '@/lib/orderStatus';
 import { paymentStatusLabel, paymentStatusTone } from '@/lib/paymentStatus';
-import { shippingOptionLabel } from '@/lib/shipping';
+import { shippingOptionLabel, trackingStatusLabel, trackingStatusTone } from '@/lib/shipping';
 import { productImageUrl } from '@/lib/media';
 import { addressLines } from '@/lib/address';
 
@@ -21,6 +26,14 @@ const WEBHOOK_EVENT_STATUS_LABEL = {
   FAILED: 'Falhou',
   IGNORED: 'Ignorado',
 };
+
+/*
+ * Espelha MelhorEnvioTrackingService.ELIGIBLE_FOR_AUTO_DELIVERY (backend):
+ * só faz sentido registrar/editar rastreio num pedido pago e ainda em curso.
+ * O backend é quem garante isso de verdade (409 fora dessa lista) — aqui é
+ * só pra decidir o que mostrar.
+ */
+const TRACKING_EDITABLE_STATUSES = ['PAGO', 'SEPARANDO', 'ENVIADO'];
 
 function getOrderOrFriendlyNotFound(orderId) {
   return getOrder(orderId).catch((err) => {
@@ -47,6 +60,29 @@ export default function AdminPedidoDetalhe() {
   const [refunding, setRefunding] = useState(false);
   const [refundError, setRefundError] = useState(null);
 
+  const [trackingCode, setTrackingCode] = useState('');
+  const [savingTracking, setSavingTracking] = useState(false);
+  const [trackingError, setTrackingError] = useState(null);
+  const [editingTracking, setEditingTracking] = useState(false);
+
+  // A rota (/admin/pedidos/:id) não remonta o componente ao trocar só o id
+  // (React Router mantém a mesma instância) — sem isso, o estado de edição
+  // de um pedido (rastreio, nota, erro) vazava pro próximo pedido aberto.
+  // Ajusta durante a renderização (não em efeito) — padrão recomendado pra
+  // resetar estado quando um "prop" (aqui, o id da rota) muda.
+  const [lastId, setLastId] = useState(id);
+  if (id !== lastId) {
+    setLastId(id);
+    setTarget('');
+    setNote('');
+    setChangeError(null);
+    setChangeOk(null);
+    setRefundError(null);
+    setTrackingCode('');
+    setTrackingError(null);
+    setEditingTracking(false);
+  }
+
   const submitRetryRefund = async () => {
     setRefunding(true);
     setRefundError(null);
@@ -57,6 +93,25 @@ export default function AdminPedidoDetalhe() {
       setRefundError(err?.response?.data?.message || 'Não foi possível tentar o estorno agora.');
     } finally {
       setRefunding(false);
+    }
+  };
+
+  const submitTracking = async (event) => {
+    event.preventDefault();
+    if (!trackingCode.trim()) return;
+    setSavingTracking(true);
+    setTrackingError(null);
+    try {
+      await updateOrderTracking(id, trackingCode.trim());
+      setEditingTracking(false);
+      setTrackingCode('');
+      refetch();
+    } catch (err) {
+      setTrackingError(
+        err?.response?.data?.message || 'Não foi possível registrar o código de rastreio.',
+      );
+    } finally {
+      setSavingTracking(false);
     }
   };
 
@@ -250,6 +305,101 @@ export default function AdminPedidoDetalhe() {
                       </div>
                     )}
                   </div>
+                </section>
+              )}
+
+              {(order.shippingTrackingCode ||
+                TRACKING_EDITABLE_STATUSES.includes(order.orderStatus)) && (
+                <section className="text-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                    Rastreio
+                  </p>
+                  {order.shippingTrackingCode && !editingTracking ? (
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      <Badge tone={trackingStatusTone(order.melhorEnvioStatus)} className="w-fit">
+                        {trackingStatusLabel(order.melhorEnvioStatus)}
+                      </Badge>
+                      <div className="text-muted">
+                        <p>Código: {order.shippingTrackingCode}</p>
+                        {order.shippingPostedAt && (
+                          <p>Postado em: {formatDateTime(order.shippingPostedAt)}</p>
+                        )}
+                        {order.shippingDeliveredAt && (
+                          <p>Entregue em: {formatDateTime(order.shippingDeliveredAt)}</p>
+                        )}
+                        {order.shippingTrackingCheckedAt && (
+                          <p>Última consulta: {formatDateTime(order.shippingTrackingCheckedAt)}</p>
+                        )}
+                      </div>
+                      {TRACKING_EDITABLE_STATUSES.includes(order.orderStatus) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="w-fit"
+                          onClick={() => {
+                            setTrackingCode(order.shippingTrackingCode);
+                            setTrackingError(null);
+                            setEditingTracking(true);
+                          }}
+                        >
+                          Corrigir código
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <form onSubmit={submitTracking} className="mt-2 space-y-3">
+                      <p className="text-xs text-muted">
+                        Cole o código de rastreio depois de comprar a etiqueta no painel do Melhor
+                        Envio. O status é consultado na hora e continua sendo atualizado sozinho
+                        depois.
+                      </p>
+                      <div className="flex flex-col gap-1.5">
+                        <label
+                          htmlFor="tracking-code"
+                          className="text-xs font-medium uppercase tracking-wider text-muted"
+                        >
+                          Código de rastreio
+                        </label>
+                        <input
+                          id="tracking-code"
+                          type="text"
+                          value={trackingCode}
+                          maxLength={60}
+                          onChange={(e) => setTrackingCode(e.target.value)}
+                          className="w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="submit"
+                          size="sm"
+                          loading={savingTracking}
+                          disabled={!trackingCode.trim()}
+                        >
+                          Salvar rastreio
+                        </Button>
+                        {editingTracking && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingTracking(false);
+                              setTrackingError(null);
+                              setTrackingCode('');
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                        )}
+                      </div>
+                      {trackingError && (
+                        <p role="alert" className="text-xs text-danger">
+                          {trackingError}
+                        </p>
+                      )}
+                    </form>
+                  )}
                 </section>
               )}
 

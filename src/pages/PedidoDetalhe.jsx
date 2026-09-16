@@ -10,7 +10,7 @@ import { useFetch } from '@/hooks/useFetch';
 import { fetchOrderById } from '@/services/orderService';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { orderStatusLabel, orderStatusTone } from '@/lib/orderStatus';
-import { shippingOptionLabel } from '@/lib/shipping';
+import { shippingOptionLabel, trackingStatusLabel, trackingStatusTone } from '@/lib/shipping';
 import { productImageUrl } from '@/lib/media';
 import { addressLines } from '@/lib/address';
 
@@ -112,6 +112,29 @@ export default function PedidoDetalhe() {
                 {addressLines(order.shippingAddress).map((line) => (
                   <p key={line}>{line}</p>
                 ))}
+              </div>
+            </section>
+          )}
+
+          {order.shippingTrackingCode && (
+            <section className="mt-8 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                Rastreio
+              </p>
+              <div className="mt-2 flex flex-col gap-1.5">
+                <Badge tone={trackingStatusTone(order.melhorEnvioStatus)} className="w-fit">
+                  {trackingStatusLabel(order.melhorEnvioStatus)}
+                </Badge>
+                <div className="text-muted">
+                  <p>Código: {order.shippingTrackingCode}</p>
+                  {order.shippingDeliveredAt ? (
+                    <p>Entregue em {formatDateTime(order.shippingDeliveredAt)}</p>
+                  ) : (
+                    order.shippingPostedAt && (
+                      <p>Postado em {formatDateTime(order.shippingPostedAt)}</p>
+                    )
+                  )}
+                </div>
               </div>
             </section>
           )}
