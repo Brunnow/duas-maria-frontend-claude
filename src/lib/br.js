@@ -57,3 +57,18 @@ export function formatCpf(value) {
   if (d.length > 9) formatted += `-${d.slice(9)}`;
   return formatted;
 }
+
+/** Só os dígitos de um CNPJ (ex.: "12.345.678/0001-99" -> "12345678000199"). */
+export function cnpjDigits(value) {
+  return digitsOnly(value);
+}
+
+/** Formata um CNPJ para "00.000.000/0000-00" enquanto o usuário digita. */
+export function formatCnpj(value) {
+  const d = cnpjDigits(value).slice(0, 14);
+  const parts = [d.slice(0, 2), d.slice(2, 5), d.slice(5, 8)].filter(Boolean);
+  let formatted = parts.join('.');
+  if (d.length > 8) formatted += `/${d.slice(8, 12)}`;
+  if (d.length > 12) formatted += `-${d.slice(12)}`;
+  return formatted;
+}

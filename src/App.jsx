@@ -23,6 +23,7 @@ import AdminEstoque from '@/pages/admin/AdminEstoque';
 import AdminPedidos from '@/pages/admin/AdminPedidos';
 import AdminPedidoDetalhe from '@/pages/admin/AdminPedidoDetalhe';
 import AdminCupons from '@/pages/admin/AdminCupons';
+import AdminConfigRemetente from '@/pages/admin/AdminConfigRemetente';
 import ProtectedRoute from '@/routes/ProtectedRoute';
 import AdminRoute from '@/routes/AdminRoute';
 import { bootstrapSession, selectIsAuthenticated, sessionExpired } from '@/features/auth/authSlice';
@@ -74,6 +75,7 @@ function App() {
               <Route path="pedidos" element={<AdminPedidos />} />
               <Route path="pedidos/:id" element={<AdminPedidoDetalhe />} />
               <Route path="cupons" element={<AdminCupons />} />
+              <Route path="remetente" element={<AdminConfigRemetente />} />
             </Route>
           </Route>
           {/* Rota antiga em ingles -> redireciona para a versao pt-BR */}
