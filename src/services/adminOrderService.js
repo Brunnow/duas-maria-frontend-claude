@@ -18,6 +18,14 @@ import api from '@/api/api';
  *         (Fase ME7-lite: a etiqueta é comprada manualmente no Melhor Envio,
  *         fora do sistema — aqui só se registra o código; o backend consulta
  *         o status na hora e continua consultando sozinho depois.)
+ *   POST  /api/admin/orders/{id}/melhor-envio/purchase
+ *         -> 200 AdminOrderDetailDTO | 404 | 409 pedido inelegível, dados
+ *            faltando (CPF/remetente), ou falha do Melhor Envio (mensagem
+ *            traz o motivo). Idempotente: chamar de novo depois de uma falha
+ *            retoma do último passo concluído (Fase ME5/ME6).
+ *   GET   /api/admin/orders/{id}/melhor-envio/print
+ *         -> 200 { url } | 404 | 409 etiqueta ainda não gerada
+ *         (busca o link ao vivo no Melhor Envio a cada chamada, não cacheia)
  */
 
 /**
@@ -54,4 +62,16 @@ export function updateOrderTracking(orderId, trackingCode) {
   return api
     .patch(`/admin/orders/${encodeURIComponent(orderId)}/tracking`, { trackingCode })
     .then((response) => response.data);
+}
+
+export function purchaseShippingLabel(orderId) {
+  return api
+    .post(`/admin/orders/${encodeURIComponent(orderId)}/melhor-envio/purchase`)
+    .then((response) => response.data);
+}
+
+export function getShippingLabelPrintUrl(orderId) {
+  return api
+    .get(`/admin/orders/${encodeURIComponent(orderId)}/melhor-envio/print`)
+    .then((response) => response.data.url);
 }

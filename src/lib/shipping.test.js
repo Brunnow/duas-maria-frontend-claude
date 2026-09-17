@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { shippingOptionLabel, trackingStatusLabel, trackingStatusTone } from './shipping';
+import {
+  shippingLabelStatusLabel,
+  shippingLabelStatusTone,
+  shippingOptionLabel,
+  trackingStatusLabel,
+  trackingStatusTone,
+} from './shipping';
 
 describe('shippingOptionLabel', () => {
   it('junta transportadora e servico quando ha os dois (Melhor Envio)', () => {
@@ -49,5 +55,29 @@ describe('trackingStatusTone', () => {
 
   it('cai em neutral quando nao reconhece o status', () => {
     expect(trackingStatusTone('algo-novo')).toBe('neutral');
+  });
+});
+
+describe('shippingLabelStatusLabel', () => {
+  it('traduz os 3 passos da compra da etiqueta (Fase ME5/ME6)', () => {
+    expect(shippingLabelStatusLabel('CARRINHO')).toBe('No carrinho do Melhor Envio');
+    expect(shippingLabelStatusLabel('PAGO')).toBe('Pago — gerando etiqueta');
+    expect(shippingLabelStatusLabel('GERADA')).toBe('Etiqueta gerada');
+  });
+
+  it('cai em "Frete ainda não comprado" quando nao ha status (compra nunca iniciada)', () => {
+    expect(shippingLabelStatusLabel(null)).toBe('Frete ainda não comprado');
+  });
+});
+
+describe('shippingLabelStatusTone', () => {
+  it('usa success so pra etiqueta gerada', () => {
+    expect(shippingLabelStatusTone('GERADA')).toBe('success');
+    expect(shippingLabelStatusTone('CARRINHO')).toBe('neutral');
+    expect(shippingLabelStatusTone('PAGO')).toBe('accent');
+  });
+
+  it('cai em neutral quando nao ha status', () => {
+    expect(shippingLabelStatusTone(null)).toBe('neutral');
   });
 });

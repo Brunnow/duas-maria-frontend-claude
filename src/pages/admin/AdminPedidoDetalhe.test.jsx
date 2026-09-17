@@ -10,10 +10,14 @@ vi.mock('@/services/adminOrderService', () => ({
   updateOrderStatus: vi.fn(),
   retryRefund: vi.fn(),
   updateOrderTracking: vi.fn(),
+  purchaseShippingLabel: vi.fn(),
+  getShippingLabelPrintUrl: vi.fn(),
 }));
 
 import {
   getOrder,
+  getShippingLabelPrintUrl,
+  purchaseShippingLabel,
   retryRefund,
   updateOrderStatus,
   updateOrderTracking,
@@ -329,6 +333,122 @@ describe('AdminPedidoDetalhe', () => {
     expect(
       await screen.findByText('Só é possível registrar rastreio para um pedido pago.'),
     ).toBeInTheDocument();
+  });
+
+  // ---------- Fase ME5/ME6: compra e impressao da etiqueta ----------
+
+  it('pedido Melhor Envio pago sem etiqueta comprada mostra botao "Comprar frete"', async () => {
+    getOrder.mockResolvedValue(detail({ order: { shippingMethod: 'MELHOR_ENVIO' } }));
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    expect(screen.getByText('Etiqueta de frete')).toBeInTheDocument();
+    expect(screen.getByText('Frete ainda não comprado')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Comprar frete' })).toBeInTheDocument();
+  });
+
+  it('clica em comprar frete e atualiza a tela com o novo status', async () => {
+    getOrder.mockResolvedValueOnce(detail({ order: { shippingMethod: 'MELHOR_ENVIO' } }));
+    getOrder.mockResolvedValue(
+      detail({ order: { shippingMethod: 'MELHOR_ENVIO', shippingLabelStatus: 'GERADA' } }),
+    );
+    purchaseShippingLabel.mockResolvedValue({});
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    fireEvent.click(screen.getByRole('button', { name: 'Comprar frete' }));
+
+    await waitFor(() => expect(purchaseShippingLabel).toHaveBeenCalledWith('77'));
+    expect(await screen.findByText('Etiqueta gerada')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abrir etiqueta' })).toBeInTheDocument();
+  });
+
+  it('erro ao comprar frete mostra a mensagem do backend', async () => {
+    getOrder.mockResolvedValue(detail({ order: { shippingMethod: 'MELHOR_ENVIO' } }));
+    purchaseShippingLabel.mockRejectedValue({
+      response: {
+        data: { message: 'Falha ao comprar frete no Melhor Envio (checkout): Saldo insuficiente' },
+      },
+    });
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    fireEvent.click(screen.getByRole('button', { name: 'Comprar frete' }));
+
+    expect(
+      await screen.findByText(
+        'Falha ao comprar frete no Melhor Envio (checkout): Saldo insuficiente',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('etiqueta em CARRINHO (compra parcial) mostra "Retomar compra" e o erro salvo no pedido', async () => {
+    getOrder.mockResolvedValue(
+      detail({
+        order: {
+          shippingMethod: 'MELHOR_ENVIO',
+          shippingLabelStatus: 'CARRINHO',
+          shippingLabelError: 'checkout: Saldo insuficiente',
+        },
+      }),
+    );
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    expect(screen.getByText('No carrinho do Melhor Envio')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retomar compra' })).toBeInTheDocument();
+    expect(screen.getByText('checkout: Saldo insuficiente')).toBeInTheDocument();
+  });
+
+  it('etiqueta gerada abre o link de impressao numa nova aba', async () => {
+    getOrder.mockResolvedValue(
+      detail({ order: { shippingMethod: 'MELHOR_ENVIO', shippingLabelStatus: 'GERADA' } }),
+    );
+    getShippingLabelPrintUrl.mockResolvedValue('https://me.example/label.pdf');
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => {});
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir etiqueta' }));
+
+    await waitFor(() => expect(getShippingLabelPrintUrl).toHaveBeenCalledWith('77'));
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://me.example/label.pdf',
+      '_blank',
+      'noopener,noreferrer',
+    );
+    openSpy.mockRestore();
+  });
+
+  it('pedido no frete fixo por UF nao mostra secao de etiqueta de frete', async () => {
+    getOrder.mockResolvedValue(detail({ order: { shippingMethod: 'FIXED_UF' } }));
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    expect(screen.queryByText('Etiqueta de frete')).not.toBeInTheDocument();
+  });
+
+  it('trocar de pedido limpa o erro de compra de etiqueta do pedido anterior', async () => {
+    purchaseShippingLabel.mockRejectedValue({
+      response: { data: { message: 'Saldo insuficiente' } },
+    });
+    getOrder.mockImplementation((id) =>
+      Promise.resolve(
+        Number(id) === 77
+          ? detail({ order: { shippingMethod: 'MELHOR_ENVIO' } })
+          : detail({ order: { orderId: 78, shippingMethod: 'MELHOR_ENVIO' } }),
+      ),
+    );
+    renderWithNavigationBetween(77, 78);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    fireEvent.click(screen.getByRole('button', { name: 'Comprar frete' }));
+    expect(await screen.findByText('Saldo insuficiente')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('link', { name: 'ir pro outro pedido' }));
+
+    await screen.findByRole('heading', { name: 'Pedido #78' });
+    expect(screen.queryByText('Saldo insuficiente')).not.toBeInTheDocument();
   });
 
   it('mostra a timeline de eventos de webhook quando houver', async () => {

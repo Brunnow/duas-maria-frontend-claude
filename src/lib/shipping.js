@@ -52,3 +52,28 @@ export function trackingStatusLabel(status) {
 export function trackingStatusTone(status) {
   return TRACKING_TONES[status] || 'neutral';
 }
+
+/*
+ * Progresso da compra da etiqueta no Melhor Envio (Fase ME5/ME6) —
+ * Order.shippingLabelStatus no backend. Sempre o último passo concluído com
+ * sucesso (nunca o que falhou); um erro em paralelo vem em shippingLabelError.
+ */
+const LABEL_STATUS_LABELS = {
+  CARRINHO: 'No carrinho do Melhor Envio',
+  PAGO: 'Pago — gerando etiqueta',
+  GERADA: 'Etiqueta gerada',
+};
+
+const LABEL_STATUS_TONES = {
+  CARRINHO: 'neutral',
+  PAGO: 'accent',
+  GERADA: 'success',
+};
+
+export function shippingLabelStatusLabel(status) {
+  return LABEL_STATUS_LABELS[status] || 'Frete ainda não comprado';
+}
+
+export function shippingLabelStatusTone(status) {
+  return LABEL_STATUS_TONES[status] || 'neutral';
+}

@@ -9,6 +9,8 @@ import ErrorState from '@/components/shared/ErrorState';
 import { useFetch } from '@/hooks/useFetch';
 import {
   getOrder,
+  getShippingLabelPrintUrl,
+  purchaseShippingLabel,
   retryRefund,
   updateOrderStatus,
   updateOrderTracking,
@@ -16,7 +18,13 @@ import {
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { orderStatusLabel, orderStatusTone } from '@/lib/orderStatus';
 import { paymentStatusLabel, paymentStatusTone } from '@/lib/paymentStatus';
-import { shippingOptionLabel, trackingStatusLabel, trackingStatusTone } from '@/lib/shipping';
+import {
+  shippingLabelStatusLabel,
+  shippingLabelStatusTone,
+  shippingOptionLabel,
+  trackingStatusLabel,
+  trackingStatusTone,
+} from '@/lib/shipping';
 import { productImageUrl } from '@/lib/media';
 import { addressLines } from '@/lib/address';
 
@@ -31,7 +39,9 @@ const WEBHOOK_EVENT_STATUS_LABEL = {
  * Espelha MelhorEnvioTrackingService.ELIGIBLE_FOR_AUTO_DELIVERY (backend):
  * só faz sentido registrar/editar rastreio num pedido pago e ainda em curso.
  * O backend é quem garante isso de verdade (409 fora dessa lista) — aqui é
- * só pra decidir o que mostrar.
+ * só pra decidir o que mostrar. Mesma lista usada pela elegibilidade de
+ * compra de etiqueta (MelhorEnvioPurchaseService reaproveita esta mesma
+ * constante no backend, de propósito).
  */
 const TRACKING_EDITABLE_STATUSES = ['PAGO', 'SEPARANDO', 'ENVIADO'];
 
@@ -65,6 +75,10 @@ export default function AdminPedidoDetalhe() {
   const [trackingError, setTrackingError] = useState(null);
   const [editingTracking, setEditingTracking] = useState(false);
 
+  const [purchasingLabel, setPurchasingLabel] = useState(false);
+  const [printingLabel, setPrintingLabel] = useState(false);
+  const [labelActionError, setLabelActionError] = useState(null);
+
   // A rota (/admin/pedidos/:id) não remonta o componente ao trocar só o id
   // (React Router mantém a mesma instância) — sem isso, o estado de edição
   // de um pedido (rastreio, nota, erro) vazava pro próximo pedido aberto.
@@ -81,6 +95,7 @@ export default function AdminPedidoDetalhe() {
     setTrackingCode('');
     setTrackingError(null);
     setEditingTracking(false);
+    setLabelActionError(null);
   }
 
   const submitRetryRefund = async () => {
@@ -112,6 +127,36 @@ export default function AdminPedidoDetalhe() {
       );
     } finally {
       setSavingTracking(false);
+    }
+  };
+
+  const submitPurchaseLabel = async () => {
+    setPurchasingLabel(true);
+    setLabelActionError(null);
+    try {
+      await purchaseShippingLabel(id);
+      refetch();
+    } catch (err) {
+      setLabelActionError(
+        err?.response?.data?.message || 'Não foi possível comprar o frete no Melhor Envio agora.',
+      );
+    } finally {
+      setPurchasingLabel(false);
+    }
+  };
+
+  const submitPrintLabel = async () => {
+    setPrintingLabel(true);
+    setLabelActionError(null);
+    try {
+      const url = await getShippingLabelPrintUrl(id);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setLabelActionError(
+        err?.response?.data?.message || 'Não foi possível abrir a etiqueta agora.',
+      );
+    } finally {
+      setPrintingLabel(false);
     }
   };
 
@@ -307,6 +352,56 @@ export default function AdminPedidoDetalhe() {
                   </div>
                 </section>
               )}
+
+              {order.shippingMethod === 'MELHOR_ENVIO' &&
+                (TRACKING_EDITABLE_STATUSES.includes(order.orderStatus) ||
+                  order.shippingLabelStatus) && (
+                  <section className="text-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                      Etiqueta de frete
+                    </p>
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      <Badge
+                        tone={shippingLabelStatusTone(order.shippingLabelStatus)}
+                        className="w-fit"
+                      >
+                        {shippingLabelStatusLabel(order.shippingLabelStatus)}
+                      </Badge>
+                      {order.shippingLabelStatus === 'GERADA' ? (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="w-fit"
+                          loading={printingLabel}
+                          onClick={submitPrintLabel}
+                        >
+                          Abrir etiqueta
+                        </Button>
+                      ) : (
+                        TRACKING_EDITABLE_STATUSES.includes(order.orderStatus) && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="w-fit"
+                            loading={purchasingLabel}
+                            onClick={submitPurchaseLabel}
+                          >
+                            {order.shippingLabelStatus ? 'Retomar compra' : 'Comprar frete'}
+                          </Button>
+                        )
+                      )}
+                      {labelActionError ? (
+                        <p role="alert" className="text-xs text-danger">
+                          {labelActionError}
+                        </p>
+                      ) : (
+                        order.shippingLabelError && (
+                          <p className="text-xs text-danger">{order.shippingLabelError}</p>
+                        )
+                      )}
+                    </div>
+                  </section>
+                )}
 
               {(order.shippingTrackingCode ||
                 TRACKING_EDITABLE_STATUSES.includes(order.orderStatus)) && (
