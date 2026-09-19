@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { FiMenu, FiSearch, FiShoppingBag } from 'react-icons/fi';
 import Container from '@/components/ui/Container';
 import { logout, selectAuth } from '@/features/auth/authSlice';
 import { openDrawer, selectCartCount } from '@/features/cart/cartSlice';
+import { fetchCategories } from '@/store/actions';
 import { cn } from '@/lib/cn';
 import MobileMenu from './MobileMenu';
 import UserMenu from './UserMenu';
@@ -21,6 +22,11 @@ export default function Header() {
   const { status, user } = useSelector(selectAuth);
   const isAuthenticated = status === 'authenticated';
   const cartCount = useSelector(selectCartCount);
+  const categories = useSelector((state) => state.products.categories);
+
+  useEffect(() => {
+    dispatch(fetchCategories());
+  }, [dispatch]);
 
   const handleLogout = async () => {
     await dispatch(logout());
@@ -110,7 +116,8 @@ export default function Header() {
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
         nav={nav}
-        auth={{ isAuthenticated, onLogout: handleLogout }}
+        categories={categories || []}
+        auth={{ isAuthenticated, username: user?.username, onLogout: handleLogout }}
       />
     </header>
   );
