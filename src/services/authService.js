@@ -4,7 +4,8 @@ import api from '@/api/api';
  * Autenticacao — contratos reais do backend (com.ecommerce.duas_marias,
  * AuthController, base /api/auth):
  *
- *   POST /signin  { username, password }        -> 200 { id, username, roles[], jwtToken } + Set-Cookie
+ *   POST /signin  { username, password }        -> 200 { id, username, roles[] } + Set-Cookie
+ *                                                  (o JWT só vai no cookie HttpOnly, nunca no corpo)
  *                                                  404 { message, status:false } em credenciais invalidas
  *   POST /signup  { username, email, password } -> 200 { message } | 400 { message }
  *   GET  /user                                  -> 200 { id, username, roles[] } (via cookie)

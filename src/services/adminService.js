@@ -138,10 +138,3 @@ export function registerMovement(productId, variantId, body) {
 export function getLowStock(threshold = 3) {
   return api.get('/admin/stock/low', { params: { threshold } }).then((response) => response.data);
 }
-
-/** GET .../variants/{variantId}/stock-movements (paginado) -> StockMovementResponse */
-export function getMovementHistory(productId, variantId, params = {}) {
-  return api
-    .get(`/admin/products/${productId}/variants/${variantId}/stock-movements`, { params })
-    .then((response) => response.data);
-}

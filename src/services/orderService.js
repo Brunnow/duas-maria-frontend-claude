@@ -44,27 +44,6 @@ export function startMercadoPagoPayment(orderId) {
 }
 
 /*
- * Checkout mock legado (Fases 0–C) — nenhuma cobrança real. Mantido só como
- * referência/fallback de desenvolvimento; a tela de checkout não usa mais
- * esta função (ver createOrder). Contrato: POST /api/order/users/payments/{paymentMethod}.
- */
-export function placeOrderMock({ addressId, paymentMethod, couponCode }) {
-  const body = {
-    addressId,
-    paymentMethod,
-    pgName: 'mock',
-    pgPaymentId: `mock-${Date.now()}`,
-    pgStatus: 'APPROVED',
-    pgResponseMessage: 'Pagamento simulado',
-    couponCode: couponCode || undefined,
-  };
-
-  return api
-    .post(`/order/users/payments/${encodeURIComponent(paymentMethod)}`, body)
-    .then((response) => response.data);
-}
-
-/*
  * Histórico de pedidos (OrderController), exige auth:
  *   GET /api/orders            -> 200 OrderDTO[] (só do usuário logado, mais recente primeiro)
  *   GET /api/orders/{orderId}  -> 200 OrderDTO | 404 (não existe OU é de outro usuário)
