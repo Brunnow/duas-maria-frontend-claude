@@ -6,6 +6,7 @@ import ErrorState from '@/components/shared/ErrorState';
 import ProductGrid from '@/components/shared/ProductGrid';
 import ProductGridSkeleton from '@/components/shared/ProductGridSkeleton';
 import { fetchProducts } from '@/store/actions';
+import CategoryShowcase from './CategoryShowcase';
 import Hero from './Hero';
 
 const FEATURED_COUNT = 8;
@@ -24,6 +25,8 @@ export default function Home() {
   return (
     <>
       <Hero />
+
+      <CategoryShowcase />
 
       <Container as="section" className="py-16 lg:py-20">
         <div className="flex flex-col items-center gap-2 text-center">

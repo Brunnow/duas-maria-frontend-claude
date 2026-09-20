@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { FiMenu, FiSearch, FiShoppingBag } from 'react-icons/fi';
+import { FiMenu, FiShoppingBag } from 'react-icons/fi';
 import Container from '@/components/ui/Container';
 import { logout, selectAuth } from '@/features/auth/authSlice';
 import { openDrawer, selectCartCount } from '@/features/cart/cartSlice';
@@ -75,13 +75,6 @@ export default function Header() {
 
         {/* Direita: acoes */}
         <div className="flex items-center gap-1 justify-self-end sm:gap-2">
-          <button
-            type="button"
-            aria-label="Buscar"
-            className="rounded-control p-2 text-foreground transition-colors hover:bg-subtle"
-          >
-            <FiSearch size={20} />
-          </button>
           {isAuthenticated ? (
             <UserMenu username={user?.username} />
           ) : (
