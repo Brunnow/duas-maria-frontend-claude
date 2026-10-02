@@ -11,6 +11,7 @@ import {
   getOrder,
   getShippingLabelPrintUrl,
   purchaseShippingLabel,
+  reconcilePayment,
   retryRefund,
   updateOrderStatus,
   updateOrderTracking,
@@ -70,6 +71,9 @@ export default function AdminPedidoDetalhe() {
   const [refunding, setRefunding] = useState(false);
   const [refundError, setRefundError] = useState(null);
 
+  const [reconciling, setReconciling] = useState(false);
+  const [reconcileError, setReconcileError] = useState(null);
+
   const [trackingCode, setTrackingCode] = useState('');
   const [savingTracking, setSavingTracking] = useState(false);
   const [trackingError, setTrackingError] = useState(null);
@@ -92,6 +96,7 @@ export default function AdminPedidoDetalhe() {
     setChangeError(null);
     setChangeOk(null);
     setRefundError(null);
+    setReconcileError(null);
     setTrackingCode('');
     setTrackingError(null);
     setEditingTracking(false);
@@ -108,6 +113,21 @@ export default function AdminPedidoDetalhe() {
       setRefundError(err?.response?.data?.message || 'Não foi possível tentar o estorno agora.');
     } finally {
       setRefunding(false);
+    }
+  };
+
+  const submitReconcilePayment = async () => {
+    setReconciling(true);
+    setReconcileError(null);
+    try {
+      await reconcilePayment(id);
+      refetch();
+    } catch (err) {
+      setReconcileError(
+        err?.response?.data?.message || 'Não foi possível reconciliar com o Mercado Pago agora.',
+      );
+    } finally {
+      setReconciling(false);
     }
   };
 
@@ -345,6 +365,27 @@ export default function AdminPedidoDetalhe() {
                         {refundError && (
                           <p role="alert" className="mt-1.5 text-xs text-danger">
                             {refundError}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {payment.status === 'PENDING' && payment.provider === 'MERCADO_PAGO' && (
+                      <div className="mt-1">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          loading={reconciling}
+                          onClick={submitReconcilePayment}
+                        >
+                          Reconciliar com o Mercado Pago
+                        </Button>
+                        <p className="mt-1 text-xs text-muted">
+                          Consulta o pagamento direto no Mercado Pago agora, sem esperar o
+                          webhook ou a checagem automática periódica.
+                        </p>
+                        {reconcileError && (
+                          <p role="alert" className="mt-1.5 text-xs text-danger">
+                            {reconcileError}
                           </p>
                         )}
                       </div>

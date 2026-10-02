@@ -9,6 +9,7 @@ vi.mock('@/services/adminOrderService', () => ({
   getOrder: vi.fn(),
   updateOrderStatus: vi.fn(),
   retryRefund: vi.fn(),
+  reconcilePayment: vi.fn(),
   updateOrderTracking: vi.fn(),
   purchaseShippingLabel: vi.fn(),
   getShippingLabelPrintUrl: vi.fn(),
@@ -18,6 +19,7 @@ import {
   getOrder,
   getShippingLabelPrintUrl,
   purchaseShippingLabel,
+  reconcilePayment,
   retryRefund,
   updateOrderStatus,
   updateOrderTracking,
@@ -233,6 +235,58 @@ describe('AdminPedidoDetalhe', () => {
 
     await waitFor(() => expect(retryRefund).toHaveBeenCalledWith('77'));
     expect(await screen.findByText('Estornado')).toBeInTheDocument();
+  });
+
+  it('pagamento Mercado Pago pendente mostra botão de reconciliar agora', async () => {
+    getOrder.mockResolvedValueOnce(
+      detail({
+        order: {
+          payment: { status: 'PENDING', provider: 'MERCADO_PAGO', providerPaymentId: 'mp-123' },
+        },
+      }),
+    );
+    getOrder.mockResolvedValue(
+      detail({
+        order: {
+          orderStatus: 'PAGO',
+          payment: {
+            status: 'APPROVED',
+            provider: 'MERCADO_PAGO',
+            providerPaymentId: 'mp-123',
+            paidAt: '2026-02-10T14:05:00',
+          },
+        },
+      }),
+    );
+    reconcilePayment.mockResolvedValue({});
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    fireEvent.click(screen.getByRole('button', { name: 'Reconciliar com o Mercado Pago' }));
+
+    await waitFor(() => expect(reconcilePayment).toHaveBeenCalledWith('77'));
+    expect(await screen.findByText('Aprovado')).toBeInTheDocument();
+  });
+
+  it('reconciliar sem pagamento no MP ainda mostra o erro do backend', async () => {
+    getOrder.mockResolvedValue(
+      detail({
+        order: {
+          payment: { status: 'PENDING', provider: 'MERCADO_PAGO', providerPaymentId: 'mp-123' },
+        },
+      }),
+    );
+    reconcilePayment.mockRejectedValue({
+      response: { data: { message: 'O Mercado Pago ainda não registrou nenhum pagamento para este pedido.' } },
+    });
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    fireEvent.click(screen.getByRole('button', { name: 'Reconciliar com o Mercado Pago' }));
+
+    expect(
+      await screen.findByText('O Mercado Pago ainda não registrou nenhum pagamento para este pedido.'),
+    ).toBeInTheDocument();
   });
 
   // ---------- Fase ME7-lite: rastreio ----------

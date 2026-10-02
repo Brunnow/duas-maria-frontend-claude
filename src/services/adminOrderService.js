@@ -12,6 +12,14 @@ import api from '@/api/api';
  *         -> 200 AdminOrderDetailDTO | 400 status inválido | 404 | 409 transição
  *   POST  /api/admin/orders/{id}/refund
  *         -> 200 AdminOrderDetailDTO | 404 | 409 pagamento não está em REFUND_PENDING
+ *   POST  /api/admin/orders/{id}/reconcile-payment
+ *         -> 200 AdminOrderDetailDTO | 404
+ *            | 409 sem pagamento Mercado Pago, pagamento não está em PENDING,
+ *              ou o Mercado Pago ainda não tem nenhum pagamento pra esse pedido
+ *         (consulta o Mercado Pago na hora em vez de esperar o webhook ou a
+ *         reconciliação periódica — achado do teste manual de 2026-09-27: o
+ *         webhook do Checkout Pro pode falhar a assinatura mesmo com o
+ *         pagamento aprovado de verdade no Mercado Pago.)
  *   PATCH /api/admin/orders/{id}/tracking { trackingCode }
  *         -> 200 AdminOrderDetailDTO | 400 código vazio | 404
  *            | 409 pedido não pago, já entregue ou cancelado
@@ -55,6 +63,12 @@ export function updateOrderStatus(orderId, { status, note }) {
 export function retryRefund(orderId) {
   return api
     .post(`/admin/orders/${encodeURIComponent(orderId)}/refund`)
+    .then((response) => response.data);
+}
+
+export function reconcilePayment(orderId) {
+  return api
+    .post(`/admin/orders/${encodeURIComponent(orderId)}/reconcile-payment`)
     .then((response) => response.data);
 }
 
