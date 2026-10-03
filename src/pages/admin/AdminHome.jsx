@@ -8,6 +8,7 @@ const LOW_THRESHOLD = 3;
 
 export default function AdminHome() {
   const [state, setState] = useState({ status: 'loading', low: [] });
+  const [stuckPayments, setStuckPayments] = useState(null);
 
   useEffect(() => {
     adminService
@@ -16,8 +17,33 @@ export default function AdminHome() {
       .catch(() => setState({ status: 'error', low: [] }));
   }, []);
 
+  useEffect(() => {
+    adminService
+      .getStuckPaymentsCount()
+      .then((count) => setStuckPayments(count))
+      .catch(() => setStuckPayments(null));
+  }, []);
+
   return (
     <div className="flex flex-col gap-8">
+      {stuckPayments > 0 && (
+        <div className="flex items-center justify-between gap-4 rounded-card border border-danger/30 bg-danger/5 p-4 text-sm">
+          <div>
+            <p className="font-medium text-danger">
+              {stuckPayments} {stuckPayments === 1 ? 'pagamento travado' : 'pagamentos travados'}
+            </p>
+            <p className="mt-0.5 text-muted">
+              A reconciliação automática com o Mercado Pago tentou e não conseguiu confirmar.
+              Abra o pedido e use "Reconciliar com o Mercado Pago" ou confira direto no painel
+              do Mercado Pago.
+            </p>
+          </div>
+          <Button as={Link} to="/admin/pedidos" variant="secondary" size="sm" className="shrink-0">
+            Ver pedidos
+          </Button>
+        </div>
+      )}
+
       <section>
         <h2 className="font-display text-xl text-foreground">Visão geral</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">

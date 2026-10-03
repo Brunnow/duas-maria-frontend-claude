@@ -138,3 +138,17 @@ export function registerMovement(productId, variantId, body) {
 export function getLowStock(threshold = 3) {
   return api.get('/admin/stock/low', { params: { threshold } }).then((response) => response.data);
 }
+
+// ---------- Pedidos ----------
+
+/**
+ * GET /api/admin/orders/stuck-payments-count -> { count }
+ * Quantos pagamentos têm uma falha de reconciliação registrada agora (achado
+ * do teste manual de 2026-09-27: o webhook do Mercado Pago pode falhar sem
+ * avisar ninguém — não conta pedidos simplesmente aguardando o cliente pagar
+ * um boleto/Pix, só os casos em que a reconciliação automática tentou e não
+ * conseguiu).
+ */
+export function getStuckPaymentsCount() {
+  return api.get('/admin/orders/stuck-payments-count').then((response) => response.data.count);
+}
