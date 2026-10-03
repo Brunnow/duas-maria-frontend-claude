@@ -434,6 +434,7 @@ describe('AdminPedidoDetalhe', () => {
         'Falha ao comprar frete no Melhor Envio (checkout): Saldo insuficiente',
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText(/comprar o/)).toHaveTextContent('comprar o frete manualmente');
   });
 
   it('etiqueta em CARRINHO (compra parcial) mostra "Retomar compra" e o erro salvo no pedido', async () => {
@@ -452,6 +453,7 @@ describe('AdminPedidoDetalhe', () => {
     expect(screen.getByText('No carrinho do Melhor Envio')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retomar compra' })).toBeInTheDocument();
     expect(screen.getByText('checkout: Saldo insuficiente')).toBeInTheDocument();
+    expect(screen.getByText(/comprar o/)).toHaveTextContent('comprar o frete manualmente');
   });
 
   it('etiqueta gerada abre o link de impressao numa nova aba', async () => {

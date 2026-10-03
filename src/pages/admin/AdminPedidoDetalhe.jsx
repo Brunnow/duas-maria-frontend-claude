@@ -440,6 +440,13 @@ export default function AdminPedidoDetalhe() {
                           <p className="text-xs text-danger">{order.shippingLabelError}</p>
                         )
                       )}
+                      {(labelActionError || order.shippingLabelError) && (
+                        <p className="text-xs text-muted">
+                          Se a compra automática continuar falhando, você pode comprar o
+                          frete manualmente no painel do Melhor Envio e colar o código de
+                          rastreio na seção &quot;Rastreio&quot; abaixo.
+                        </p>
+                      )}
                     </div>
                   </section>
                 )}
