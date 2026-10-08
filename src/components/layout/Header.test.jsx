@@ -11,7 +11,7 @@ import Header from './Header';
 describe('Header', () => {
   it('mostra o wordmark e a navegacao principal', () => {
     renderWithProviders(<Header />);
-    expect(screen.getByRole('link', { name: 'Duas Marias' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Duas Maria' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'Produtos' })).toHaveAttribute('href', '/produtos');
   });
 

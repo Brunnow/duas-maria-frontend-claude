@@ -24,7 +24,7 @@ export default function Footer() {
     <footer className="mt-20 border-t border-border bg-surface">
       <Container className="grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-3">
         <div>
-          <p className="font-display text-xl text-foreground">Duas Marias</p>
+          <p className="font-display text-xl text-foreground">Duas Maria</p>
           <p className="mt-3 max-w-xs text-sm text-muted">
             Moda feminina com curadoria. Peças atemporais, feitas para durar.
           </p>
@@ -51,7 +51,7 @@ export default function Footer() {
       <div className="border-t border-border">
         <Container className="py-8">
           <p className="text-xs text-muted">
-            © {new Date().getFullYear()} Duas Marias. Todos os direitos reservados.
+            © {new Date().getFullYear()} Duas Maria. Todos os direitos reservados.
           </p>
         </Container>
       </div>

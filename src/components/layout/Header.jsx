@@ -70,7 +70,7 @@ export default function Header() {
           to="/"
           className="justify-self-center font-display text-2xl tracking-wide text-foreground lg:text-[28px]"
         >
-          Duas Marias
+          Duas Maria
         </Link>
 
         {/* Direita: acoes */}
