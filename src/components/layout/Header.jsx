@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { FiMenu, FiShoppingBag } from 'react-icons/fi';
+import { FiMenu, FiShoppingBag, FiUser } from 'react-icons/fi';
 import Container from '@/components/ui/Container';
 import { logout, selectAuth } from '@/features/auth/authSlice';
 import { openDrawer, selectCartCount } from '@/features/cart/cartSlice';
@@ -35,7 +35,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
-      <Container className="grid h-16 grid-cols-[1fr_auto_1fr] items-center lg:h-20">
+      <Container className="grid h-16 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 lg:h-20">
         {/* Esquerda: menu mobile + navegacao desktop */}
         <div className="flex items-center gap-6 justify-self-start">
           <button
@@ -65,10 +65,10 @@ export default function Header() {
           </nav>
         </div>
 
-        {/* Centro: wordmark (placeholder ate haver arte de logo) */}
+        {/* Centro: wordmark */}
         <Link
           to="/"
-          className="justify-self-center font-display text-2xl tracking-wide text-foreground lg:text-[28px]"
+          className="justify-self-center whitespace-nowrap font-display text-xl tracking-wide text-foreground sm:text-2xl lg:text-[28px]"
         >
           Duas Maria
         </Link>
@@ -80,9 +80,11 @@ export default function Header() {
           ) : (
             <Link
               to="/login"
-              className="rounded-control px-3 py-2 text-sm text-foreground transition-colors hover:bg-subtle"
+              aria-label="Entrar"
+              className="rounded-control p-2 text-sm text-foreground transition-colors hover:bg-subtle sm:px-3"
             >
-              Entrar
+              <FiUser size={20} aria-hidden="true" className="sm:hidden" />
+              <span className="hidden sm:inline">Entrar</span>
             </Link>
           )}
           <button
