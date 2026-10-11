@@ -139,6 +139,42 @@ describe('Checkout', () => {
     expect(screen.getAllByText(/R\$\s*259,90/).length).toBeGreaterThanOrEqual(2);
   });
 
+  it('SEDEX com desconto do frete gratis mostra preco cheio riscado e cobra a diferenca', async () => {
+    getShippingOptions.mockResolvedValueOnce([
+      {
+        serviceId: '1',
+        carrierName: 'Correios',
+        serviceName: 'PAC',
+        price: 0,
+        deliveryDays: 7,
+        freeShipping: true,
+        originalPrice: 27.6,
+      },
+      {
+        serviceId: '2',
+        carrierName: 'Correios',
+        serviceName: 'SEDEX',
+        price: 34.72,
+        deliveryDays: 3,
+        freeShipping: false,
+        originalPrice: 62.32,
+      },
+    ]);
+    renderCheckout();
+
+    fireEvent.click(screen.getByRole('radio', { name: /Rua das Flores/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    expect(await screen.findByText(/R\$\s*62,32/)).toHaveClass('line-through');
+    expect(screen.getByText(/R\$\s*34,72/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('radio', { name: /SEDEX/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    // Produtos 259,90 + SEDEX com desconto 34,72 = 294,62
+    expect(await screen.findByText(/R\$\s*294,62/)).toBeInTheDocument();
+  });
+
   it('mostra multiplas opcoes de frete e deixa o cliente trocar', async () => {
     getShippingOptions.mockResolvedValueOnce([
       { serviceId: '1', carrierName: 'Correios', serviceName: 'PAC', price: 27.6, deliveryDays: 7 },

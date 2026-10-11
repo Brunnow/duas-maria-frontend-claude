@@ -55,8 +55,9 @@ export default function AdminFreteGratis() {
       <p className="mt-1 text-sm text-muted">
         Quando o valor dos produtos no carrinho (antes do cupom) chegar ao mínimo, o PAC dos Correios
         fica grátis para a cliente (se o PAC não estiver disponível para o CEP, a opção mais barata
-        fica grátis no lugar). As outras opções, como o SEDEX, continuam com o preço normal. A
-        etiqueta continua sendo comprada no Melhor Envio, paga pela loja.
+        fica grátis no lugar). O SEDEX ganha um desconto do mesmo valor, e a cliente paga só a
+        diferença. As demais transportadoras continuam com o preço normal. A etiqueta continua
+        sendo comprada no Melhor Envio, paga pela loja.
       </p>
 
       {status === 'loading' ? (
