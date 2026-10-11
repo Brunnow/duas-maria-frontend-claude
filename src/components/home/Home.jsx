@@ -8,6 +8,7 @@ import ProductGridSkeleton from '@/components/shared/ProductGridSkeleton';
 import { fetchProducts } from '@/store/actions';
 import CategoryShowcase from './CategoryShowcase';
 import Hero from './Hero';
+import HighlightsStrip from './HighlightsStrip';
 
 const FEATURED_COUNT = 8;
 
@@ -25,6 +26,8 @@ export default function Home() {
   return (
     <>
       <Hero />
+
+      <HighlightsStrip />
 
       <CategoryShowcase />
 

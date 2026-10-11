@@ -10,7 +10,7 @@ const NAV = [
   { to: '/admin/estoque', label: 'Estoque' },
   { to: '/admin/cupons', label: 'Cupons' },
   { to: '/admin/frete-gratis', label: 'Frete grátis' },
-  { to: '/admin/tarja', label: 'Tarja do site' },
+  { to: '/admin/tarja', label: 'Avisos do site' },
   { to: '/admin/remetente', label: 'Remetente' },
 ];
 

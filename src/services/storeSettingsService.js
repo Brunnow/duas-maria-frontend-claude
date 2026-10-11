@@ -8,6 +8,7 @@ import api from '@/api/api';
  *   GET /api/admin/store-settings  -> 200 (mesmo formato, inclui rascunho da tarja desligada)
  *   PUT /api/admin/store-settings { freeShippingMinAmount } -> só o frete grátis
  *   PUT /api/admin/store-settings/announcement { enabled, text, couponCode } -> só a tarja
+ *   PUT /api/admin/store-settings/highlights { enabled, items: [{ kind, icon, text }] } -> só a faixa
  *
  * freeShippingMinAmount null = frete grátis desativado.
  */
@@ -39,6 +40,13 @@ export function getStoreSettings() {
 
 export function saveStoreSettings(settings) {
   return api.put('/admin/store-settings', settings).then((response) => {
+    invalidatePublicStoreSettings();
+    return response.data;
+  });
+}
+
+export function saveHighlights(highlights) {
+  return api.put('/admin/store-settings/highlights', highlights).then((response) => {
     invalidatePublicStoreSettings();
     return response.data;
   });

@@ -3,6 +3,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Skeleton from '@/components/ui/Skeleton';
 import ErrorState from '@/components/shared/ErrorState';
+import HighlightsForm from '@/components/admin/HighlightsForm';
 import { useFetch } from '@/hooks/useFetch';
 import { getStoreSettings, saveAnnouncementBar } from '@/services/storeSettingsService';
 
@@ -59,11 +60,7 @@ export default function AdminTarja() {
 
   return (
     <div>
-      <h2 className="font-display text-xl text-foreground">Tarja do site</h2>
-      <p className="mt-1 text-sm text-muted">
-        Faixa no topo de todas as páginas, para avisos e promoções. Se informar um cupom, ele aparece
-        como botão que copia o código. O cupom precisa estar cadastrado em &quot;Cupons&quot;.
-      </p>
+      <h2 className="font-display text-xl text-foreground">Avisos do site</h2>
 
       {status === 'loading' ? (
         <Skeleton className="mt-6 h-48" />
@@ -78,82 +75,107 @@ export default function AdminTarja() {
           }
         />
       ) : (
-        <form onSubmit={handleSubmit} noValidate className="mt-6 max-w-xl space-y-4">
-          <label className="flex items-center gap-2 text-sm text-foreground">
-            <input
-              type="checkbox"
-              checked={enabled}
-              onChange={(event) => {
-                setEnabled(event.target.checked);
-                setFieldError(null);
-              }}
-            />
-            Mostrar a tarja no site
-          </label>
+        <>
+          <section className="mt-6">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">
+              Tarja do topo
+            </h3>
+            <p className="mt-1 text-sm text-muted">
+              Faixa no topo de todas as páginas, para avisos e promoções. Se informar um cupom, ele
+              aparece como botão que copia o código. O cupom precisa estar cadastrado em
+              &quot;Cupons&quot;.
+            </p>
+            <form onSubmit={handleSubmit} noValidate className="mt-4 max-w-xl space-y-4">
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={enabled}
+                  onChange={(event) => {
+                    setEnabled(event.target.checked);
+                    setFieldError(null);
+                  }}
+                />
+                Mostrar a tarja no site
+              </label>
 
-          <Input
-            label="Texto da tarja"
-            name="announcementText"
-            maxLength={MAX_TEXT}
-            placeholder="Ganhe 10% de desconto na sua primeira compra com o cupom"
-            value={text}
-            onChange={(event) => {
-              setText(event.target.value);
-              setFieldError(null);
-            }}
-            error={fieldError}
-            hint={`${text.length}/${MAX_TEXT} caracteres. Para caber em uma linha no celular, use até uns ${MOBILE_ONE_LINE} (ex.: "10% OFF na 1ª compra com o cupom").`}
-          />
+              <Input
+                label="Texto da tarja"
+                name="announcementText"
+                maxLength={MAX_TEXT}
+                placeholder="Ganhe 10% de desconto na sua primeira compra com o cupom"
+                value={text}
+                onChange={(event) => {
+                  setText(event.target.value);
+                  setFieldError(null);
+                }}
+                error={fieldError}
+                hint={`${text.length}/${MAX_TEXT} caracteres. Para caber em uma linha no celular, use até uns ${MOBILE_ONE_LINE} (ex.: "10% OFF na 1ª compra com o cupom").`}
+              />
 
-          <Input
-            label="Cupom (opcional)"
-            name="announcementCouponCode"
-            placeholder="PRIMEIRACOMPRA"
-            value={couponCode}
-            onChange={(event) => setCouponCode(event.target.value)}
-            hint="Deixe vazio se a tarja não divulgar cupom."
-          />
+              <Input
+                label="Cupom (opcional)"
+                name="announcementCouponCode"
+                placeholder="PRIMEIRACOMPRA"
+                value={couponCode}
+                onChange={(event) => setCouponCode(event.target.value)}
+                hint="Deixe vazio se a tarja não divulgar cupom."
+              />
 
-          {text.trim() && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Prévia</p>
-              <p className="mt-2 text-xs text-muted">Computador</p>
-              <div className="mt-1 flex flex-wrap items-center justify-center gap-2 rounded-card bg-accent px-3 py-2 text-center text-sm text-accent-fg">
-                <span>{text.trim()}</span>
-                {previewCode && (
-                  <span className="rounded-control border border-dashed border-accent-fg/70 px-2 py-0.5 font-semibold tracking-wider">
-                    {previewCode}
-                  </span>
+              {text.trim() && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                    Prévia
+                  </p>
+                  <p className="mt-2 text-xs text-muted">Computador</p>
+                  <div className="mt-1 flex flex-wrap items-center justify-center gap-2 rounded-card bg-accent px-3 py-2 text-center text-sm text-accent-fg">
+                    <span>{text.trim()}</span>
+                    {previewCode && (
+                      <span className="rounded-control border border-dashed border-accent-fg/70 px-2 py-0.5 font-semibold tracking-wider">
+                        {previewCode}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-3 text-xs text-muted">Celular</p>
+                  <div className="mt-1 flex w-full max-w-[375px] flex-wrap items-center justify-center gap-x-2 gap-y-0.5 rounded-card bg-accent px-4 py-1.5 text-center text-[11px] leading-tight text-accent-fg">
+                    <span>{text.trim()}</span>
+                    {previewCode && (
+                      <span className="rounded-control border border-dashed border-accent-fg/70 px-1.5 py-px font-semibold tracking-wide">
+                        {previewCode}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <Button type="submit" loading={submitting}>
+                  Salvar
+                </Button>
+                {saveOk && (
+                  <p role="status" className="text-sm text-success">
+                    {enabled ? 'Tarja salva e visível no site.' : 'Tarja salva (oculta no site).'}
+                  </p>
+                )}
+                {saveError && (
+                  <p role="alert" className="text-sm text-danger">
+                    {saveError}
+                  </p>
                 )}
               </div>
-              <p className="mt-3 text-xs text-muted">Celular</p>
-              <div className="mt-1 flex w-full max-w-[375px] flex-wrap items-center justify-center gap-x-2 gap-y-0.5 rounded-card bg-accent px-4 py-1.5 text-center text-[11px] leading-tight text-accent-fg">
-                <span>{text.trim()}</span>
-                {previewCode && (
-                  <span className="rounded-control border border-dashed border-accent-fg/70 px-1.5 py-px font-semibold tracking-wide">
-                    {previewCode}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
+            </form>
+          </section>
 
-          <div className="flex items-center gap-3">
-            <Button type="submit" loading={submitting}>
-              Salvar
-            </Button>
-            {saveOk && (
-              <p role="status" className="text-sm text-success">
-                {enabled ? 'Tarja salva e visível no site.' : 'Tarja salva (oculta no site).'}
-              </p>
-            )}
-            {saveError && (
-              <p role="alert" className="text-sm text-danger">
-                {saveError}
-              </p>
-            )}
-          </div>
-        </form>
+          <section className="mt-10 border-t border-border pt-8">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">
+              Faixa de benefícios (abaixo da capa)
+            </h3>
+            <p className="mt-1 mb-4 text-sm text-muted">
+              Até 4 itens com ícone. No computador aparecem lado a lado; no celular e tablet, um por vez,
+              trocando sozinhos.
+            </p>
+            <HighlightsForm initial={data} onSaved={refetch} />
+          </section>
+        </>
       )}
     </div>
   );

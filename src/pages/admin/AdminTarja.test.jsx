@@ -5,6 +5,7 @@ import { adminAuth, renderWithProviders } from '@/test/renderWithProviders';
 vi.mock('@/services/storeSettingsService', () => ({
   getStoreSettings: vi.fn(),
   saveAnnouncementBar: vi.fn(),
+  saveHighlights: vi.fn(),
 }));
 
 import * as svc from '@/services/storeSettingsService';
