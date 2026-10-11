@@ -1,29 +1,42 @@
 import { Link } from 'react-router-dom';
 import Button from '@/components/ui/Button';
-import Container from '@/components/ui/Container';
+import bannerFull from '@/assets/hero-banner.webp';
+import banner1200 from '@/assets/hero-banner-1200.webp';
+import bannerMobile from '@/assets/hero-banner-mobile.webp';
 
 /*
- * Hero da Home. Por enquanto e um hero tipografico sobre fundo tonal
- * (sem foto de terceiros). Quando houver arte de campanha, basta
- * aplicar a imagem como background desta <section>.
+ * Duas artes com a logo já aplicada: horizontal (md+) e vertical 4:5 (celular).
+ * O botão no desktop é posicionado em % da imagem, alinhado ao texto
+ * "ROUPAS E ACESSÓRIOS" da arte — se a arte mudar, revisar left/top.
  */
 export default function Hero() {
   return (
-    <section className="bg-subtle">
-      <Container className="flex min-h-[60vh] flex-col justify-center py-16 lg:min-h-[72vh] lg:py-24">
-        <p className="text-xs font-semibold uppercase tracking-widest text-accent">Nova coleção</p>
-        <h1 className="mt-4 max-w-2xl font-display text-4xl leading-tight text-foreground sm:text-5xl lg:text-6xl">
-          Peças atemporais para o dia a dia
-        </h1>
-        <p className="mt-5 max-w-md text-sm text-muted sm:text-base">
-          Moda feminina com curadoria: caimento, tecido e acabamento pensados para durar.
-        </p>
-        <div className="mt-8">
-          <Button as={Link} to="/produtos" size="lg">
+    <section className="bg-hero">
+      <h1 className="sr-only">Duas Maria — Roupas e acessórios</h1>
+
+      <div className="relative mx-auto max-w-[1983px]">
+        <picture>
+          <source
+            media="(min-width: 768px)"
+            srcSet={`${banner1200} 1200w, ${bannerFull} 1983w`}
+            sizes="100vw"
+          />
+          <img
+            src={bannerMobile}
+            alt="Joscilene e Maria, fundadoras da Duas Maria, vestindo peças da marca"
+            width={940}
+            height={1175}
+            fetchPriority="high"
+            className="mx-auto block h-auto w-full max-w-[480px] md:max-w-none"
+          />
+        </picture>
+
+        <div className="absolute left-[21.5%] top-[69%] hidden md:block">
+          <Button as={Link} to="/produtos" className="lg:h-12 lg:px-7">
             Ver produtos
           </Button>
         </div>
-      </Container>
+      </div>
     </section>
   );
 }
