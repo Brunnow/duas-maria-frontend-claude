@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import CartDrawer from '@/components/cart/CartDrawer';
+import FloatingWhatsApp from './FloatingWhatsApp';
 import Footer from './Footer';
 import Header from './Header';
 
@@ -13,6 +14,7 @@ export default function Layout() {
       </main>
       <Footer />
       <CartDrawer />
+      <FloatingWhatsApp />
     </div>
   );
 }
