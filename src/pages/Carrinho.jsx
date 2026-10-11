@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
 import CartLineItem from '@/components/cart/CartLineItem';
+import FreeShippingProgress from '@/components/cart/FreeShippingProgress';
 import { selectCart } from '@/features/cart/cartSlice';
 import { formatCurrency } from '@/lib/format';
 
@@ -39,6 +40,7 @@ export default function Carrinho() {
 
           <aside className="h-fit rounded-card border border-border p-5">
             <h2 className="font-display text-lg text-foreground">Resumo</h2>
+            <FreeShippingProgress subtotal={totalPrice} className="mt-4" />
             <div className="mt-4 flex items-center justify-between text-sm">
               <span className="text-muted">Subtotal</span>
               <span className="text-foreground">{formatCurrency(totalPrice)}</span>

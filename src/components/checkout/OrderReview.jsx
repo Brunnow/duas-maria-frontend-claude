@@ -1,6 +1,6 @@
 import { formatCurrency } from '@/lib/format';
 import { addressLines } from '@/lib/address';
-import { shippingOptionLabel } from '@/lib/shipping';
+import { formatShipping, shippingOptionLabel } from '@/lib/shipping';
 
 export default function OrderReview({ items, address, shipping, coupon }) {
   const productsTotal = items.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
@@ -79,7 +79,9 @@ export default function OrderReview({ items, address, shipping, coupon }) {
           <span className="text-muted">
             Frete{shipping ? ` · ${shippingOptionLabel(shipping)}` : ''}
           </span>
-          <span className="text-foreground">{formatCurrency(shippingAmount)}</span>
+          <span className="text-foreground">
+            {shipping ? formatShipping(shippingAmount) : formatCurrency(shippingAmount)}
+          </span>
         </div>
         <div className="mt-2 flex items-center justify-between border-t border-border pt-3 text-sm font-medium">
           <span>A pagar</span>

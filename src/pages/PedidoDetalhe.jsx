@@ -10,7 +10,12 @@ import { useFetch } from '@/hooks/useFetch';
 import { fetchOrderById } from '@/services/orderService';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { orderStatusLabel, orderStatusTone } from '@/lib/orderStatus';
-import { shippingOptionLabel, trackingStatusLabel, trackingStatusTone } from '@/lib/shipping';
+import {
+  formatShipping,
+  shippingOptionLabel,
+  trackingStatusLabel,
+  trackingStatusTone,
+} from '@/lib/shipping';
 import { productImageUrl } from '@/lib/media';
 import { addressLines } from '@/lib/address';
 
@@ -156,7 +161,7 @@ export default function PedidoDetalhe() {
                       serviceName: order.shippingServiceName,
                     })}
                   </span>
-                  <span>{formatCurrency(order.shippingAmount)}</span>
+                  <span>{formatShipping(order.shippingAmount)}</span>
                 </div>
               )}
               <div className="flex justify-between border-t border-border pt-1 font-medium text-foreground">

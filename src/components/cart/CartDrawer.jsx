@@ -10,6 +10,7 @@ import {
 } from '@/features/cart/cartSlice';
 import { formatCurrency } from '@/lib/format';
 import CartLineItem from './CartLineItem';
+import FreeShippingProgress from './FreeShippingProgress';
 
 export default function CartDrawer() {
   const dispatch = useDispatch();
@@ -21,6 +22,7 @@ export default function CartDrawer() {
   const footer =
     items.length > 0 ? (
       <div className="flex flex-col gap-3">
+        <FreeShippingProgress subtotal={totalPrice} />
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted">Subtotal</span>
           <span className="font-medium text-foreground">{formatCurrency(totalPrice)}</span>

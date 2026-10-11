@@ -13,6 +13,10 @@ vi.mock('@/services/cartService', () => ({
 
 import * as cartService from '@/services/cartService';
 
+vi.mock('@/services/storeSettingsService', () => ({
+  getPublicStoreSettings: vi.fn().mockResolvedValue({ freeShippingMinAmount: null }),
+}));
+
 const item = {
   cartItemId: 9,
   productId: 2,

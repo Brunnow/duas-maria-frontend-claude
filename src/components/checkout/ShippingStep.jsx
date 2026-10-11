@@ -59,7 +59,16 @@ export default function ShippingStep({ shipping, uf, selectedServiceId, onSelect
                   )}
                 </span>
               </span>
-              <span className="font-medium text-foreground">{formatCurrency(option.price)}</span>
+              {option.freeShipping ? (
+                <span className="flex flex-col items-end">
+                  <span className="text-xs text-muted line-through">
+                    {formatCurrency(option.originalPrice)}
+                  </span>
+                  <span className="font-medium text-success">Grátis</span>
+                </span>
+              ) : (
+                <span className="font-medium text-foreground">{formatCurrency(option.price)}</span>
+              )}
             </label>
           ))}
 

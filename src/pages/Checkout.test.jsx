@@ -112,6 +112,33 @@ describe('Checkout', () => {
     expect(screen.getByText(/Entrega padrão/)).toBeInTheDocument();
   });
 
+  it('opcao com frete gratis mostra o preco original riscado e soma zero na revisao', async () => {
+    getShippingOptions.mockResolvedValueOnce([
+      {
+        serviceId: '1',
+        carrierName: 'Correios',
+        serviceName: 'PAC',
+        price: 0,
+        deliveryDays: 7,
+        freeShipping: true,
+        originalPrice: 27.6,
+      },
+    ]);
+    renderCheckout();
+
+    fireEvent.click(screen.getByRole('radio', { name: /Rua das Flores/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    expect(await screen.findByText(/R\$\s*27,60/)).toHaveClass('line-through');
+    expect(screen.getByText('Grátis')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    // revisao: frete "Gratis" e total = so os produtos (259,90)
+    expect(await screen.findByText(/Correios · PAC/)).toBeInTheDocument();
+    expect(screen.getByText('Grátis')).toBeInTheDocument();
+    expect(screen.getAllByText(/R\$\s*259,90/).length).toBeGreaterThanOrEqual(2);
+  });
+
   it('mostra multiplas opcoes de frete e deixa o cliente trocar', async () => {
     getShippingOptions.mockResolvedValueOnce([
       { serviceId: '1', carrierName: 'Correios', serviceName: 'PAC', price: 27.6, deliveryDays: 7 },

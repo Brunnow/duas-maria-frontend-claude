@@ -22,6 +22,7 @@ import { paymentStatusLabel, paymentStatusTone } from '@/lib/paymentStatus';
 import {
   shippingLabelStatusLabel,
   shippingLabelStatusTone,
+  formatShipping,
   shippingOptionLabel,
   trackingStatusLabel,
   trackingStatusTone,
@@ -296,7 +297,7 @@ export default function AdminPedidoDetalhe() {
                           serviceName: order.shippingServiceName,
                         })}
                       </span>
-                      <span>{formatCurrency(order.shippingAmount)}</span>
+                      <span>{formatShipping(order.shippingAmount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between border-t border-border pt-1 font-medium text-foreground">

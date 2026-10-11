@@ -1,3 +1,10 @@
+import { formatCurrency } from '@/lib/format';
+
+/** Valor do frete para exibição: "Grátis" quando zerado pelo frete grátis. */
+export function formatShipping(amount) {
+  return Number(amount) === 0 ? 'Grátis' : formatCurrency(amount);
+}
+
 /*
  * Rótulo de uma opção de frete: transportadora + serviço para as opções
  * reais do Melhor Envio ("Correios · PAC", Fase ME3), ou "Entrega padrão"

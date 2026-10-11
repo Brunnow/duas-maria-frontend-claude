@@ -9,6 +9,7 @@ import ErrorState from '@/components/shared/ErrorState';
 import { useFetch } from '@/hooks/useFetch';
 import { fetchOrders } from '@/services/orderService';
 import { formatCurrency, formatDate } from '@/lib/format';
+import { formatShipping } from '@/lib/shipping';
 import { orderStatusLabel, orderStatusTone } from '@/lib/orderStatus';
 
 /* Rota protegida (ver App.jsx). GET /api/orders — só os pedidos do usuário logado. */
@@ -60,7 +61,13 @@ export default function Pedidos() {
                       {formatDate(order.createdAt)} · {order.orderItems?.length ?? 0}{' '}
                       {(order.orderItems?.length ?? 0) === 1 ? 'item' : 'itens'}
                       {order.shippingAmount != null && (
-                        <> · frete {formatCurrency(order.shippingAmount)}</>
+                        <>
+                          {' '}
+                          ·{' '}
+                          {Number(order.shippingAmount) === 0
+                            ? 'frete grátis'
+                            : `frete ${formatShipping(order.shippingAmount)}`}
+                        </>
                       )}
                     </p>
                   </div>

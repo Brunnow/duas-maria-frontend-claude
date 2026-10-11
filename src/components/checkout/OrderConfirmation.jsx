@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import { formatCurrency } from '@/lib/format';
-import { shippingOptionLabel } from '@/lib/shipping';
+import { formatShipping, shippingOptionLabel } from '@/lib/shipping';
 
 export default function OrderConfirmation({ order }) {
   const hasShipping = order.shippingAmount != null;
@@ -41,7 +41,7 @@ export default function OrderConfirmation({ order }) {
                 serviceName: order.shippingServiceName,
               })}
             </span>
-            <span>{formatCurrency(order.shippingAmount)}</span>
+            <span>{formatShipping(order.shippingAmount)}</span>
           </div>
         )}
         <div className="mt-3 flex items-center justify-between border-t border-border pt-3 font-medium">
