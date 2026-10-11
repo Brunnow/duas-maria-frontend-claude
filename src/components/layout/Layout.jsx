@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import CartDrawer from '@/components/cart/CartDrawer';
+import AnnouncementBar from './AnnouncementBar';
 import FloatingWhatsApp from './FloatingWhatsApp';
 import Footer from './Footer';
 import Header from './Header';
@@ -8,6 +9,7 @@ import Header from './Header';
 export default function Layout() {
   return (
     <div className="flex min-h-dvh flex-col">
+      <AnnouncementBar />
       <Header />
       <main className="flex-1">
         <Outlet />
