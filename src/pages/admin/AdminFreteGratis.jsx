@@ -4,7 +4,7 @@ import Input from '@/components/ui/Input';
 import Skeleton from '@/components/ui/Skeleton';
 import ErrorState from '@/components/shared/ErrorState';
 import { useFetch } from '@/hooks/useFetch';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, parseDecimal } from '@/lib/format';
 import { getStoreSettings, saveStoreSettings } from '@/services/storeSettingsService';
 
 export default function AdminFreteGratis() {
@@ -26,7 +26,7 @@ export default function AdminFreteGratis() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     const trimmed = value.trim();
-    const amount = trimmed === '' ? null : Number(trimmed);
+    const amount = trimmed === '' ? null : parseDecimal(trimmed);
     if (amount !== null && (!Number.isFinite(amount) || amount <= 0)) {
       setFieldError('Informe um valor maior que zero, ou deixe vazio para desativar.');
       return;
@@ -82,9 +82,6 @@ export default function AdminFreteGratis() {
           <Input
             label="Frete grátis a partir de (R$)"
             name="freeShippingMinAmount"
-            type="number"
-            min="0"
-            step="0.01"
             inputMode="decimal"
             placeholder="Ex.: 299,90"
             value={value}

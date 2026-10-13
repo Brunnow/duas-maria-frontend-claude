@@ -62,6 +62,43 @@ describe('AdminCupons', () => {
     );
   });
 
+  it('aceita valores com vírgula e mostra erro junto ao botão', async () => {
+    svc.listCoupons.mockResolvedValue([]);
+    svc.createCoupon.mockRejectedValue({ response: { data: { message: 'Código já existe' } } });
+    renderWithProviders(<AdminCupons />, { preloadedState: adminAuth });
+    await screen.findByText('Nenhum cupom');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo cupom' }));
+    fireEvent.change(screen.getByLabelText('Código'), { target: { value: 'frete' } });
+    fireEvent.change(screen.getByLabelText('Tipo de desconto'), { target: { value: 'FIXED' } });
+    fireEvent.change(screen.getByLabelText('Valor (R$)'), { target: { value: '20,50' } });
+    fireEvent.change(screen.getByLabelText('Pedido mínimo (R$)'), {
+      target: { value: '1.149,90' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar cupom' }));
+
+    await waitFor(() =>
+      expect(svc.createCoupon).toHaveBeenCalledWith(
+        expect.objectContaining({ discountValue: 20.5, minOrderAmount: 1149.9 }),
+      ),
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('Código já existe');
+  });
+
+  it('bloqueia valor inválido sem chamar a API', async () => {
+    svc.listCoupons.mockResolvedValue([]);
+    renderWithProviders(<AdminCupons />, { preloadedState: adminAuth });
+    await screen.findByText('Nenhum cupom');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo cupom' }));
+    fireEvent.change(screen.getByLabelText('Código'), { target: { value: 'x' } });
+    fireEvent.change(screen.getByLabelText('Valor (%)'), { target: { value: 'dez' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar cupom' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Confira os valores');
+    expect(svc.createCoupon).not.toHaveBeenCalled();
+  });
+
   it('desativa um cupom', async () => {
     svc.listCoupons.mockResolvedValue([coupon]);
     svc.updateCoupon.mockResolvedValue({ ...coupon, active: false });

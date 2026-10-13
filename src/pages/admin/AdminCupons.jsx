@@ -9,7 +9,7 @@ import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import { useFetch } from '@/hooks/useFetch';
 import * as adminCouponService from '@/services/adminCouponService';
-import { formatCurrency, formatDateTime } from '@/lib/format';
+import { formatCurrency, formatDateTime, parseDecimal } from '@/lib/format';
 
 const errText = (err, fallback) => err?.response?.data?.message || fallback;
 
@@ -44,14 +44,18 @@ function fromCoupon(c) {
   };
 }
 
+const isBlank = (v) => v === '' || v == null;
+
 function toBody(form) {
-  const num = (v) => (v === '' || v == null ? undefined : Number(v));
+  const num = (v) => (isBlank(v) ? undefined : Number(v));
+  // Valores em R$/% aceitam vírgula (teclado pt-BR do celular).
+  const dec = (v) => (isBlank(v) ? undefined : parseDecimal(v));
   return {
     code: form.code.trim(),
     description: form.description.trim() || undefined,
     discountType: form.discountType,
-    discountValue: num(form.discountValue),
-    minOrderAmount: num(form.minOrderAmount),
+    discountValue: dec(form.discountValue),
+    minOrderAmount: dec(form.minOrderAmount),
     startsAt: form.startsAt || undefined,
     endsAt: form.endsAt || undefined,
     maxRedemptions: num(form.maxRedemptions),
@@ -86,6 +90,9 @@ export default function AdminCupons() {
   const [saving, setSaving] = useState(false);
   const [rowBusy, setRowBusy] = useState(null);
   const [notice, setNotice] = useState(null);
+  // Erro do formulário, mostrado junto ao botão (o `notice` fica no topo e,
+  // no celular, fora da tela de quem clicou em salvar).
+  const [formError, setFormError] = useState(null);
 
   const set = (field) => (e) =>
     setForm((f) => ({
@@ -97,24 +104,33 @@ export default function AdminCupons() {
     setForm(EMPTY_FORM);
     setEditing('new');
     setNotice(null);
+    setFormError(null);
   };
 
   const openEdit = (coupon) => {
     setForm(fromCoupon(coupon));
     setEditing(coupon.id);
     setNotice(null);
+    setFormError(null);
   };
 
   const close = () => setEditing(null);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!form.code.trim() || form.discountValue === '') {
-      setNotice('Informe ao menos o código e o valor do desconto.');
+    if (!form.code.trim() || isBlank(form.discountValue)) {
+      setFormError('Informe ao menos o código e o valor do desconto.');
+      return;
+    }
+    const discount = parseDecimal(form.discountValue);
+    const minOrder = isBlank(form.minOrderAmount) ? 0 : parseDecimal(form.minOrderAmount);
+    if (!Number.isFinite(discount) || discount <= 0 || !Number.isFinite(minOrder) || minOrder < 0) {
+      setFormError('Confira os valores: use números, por exemplo 10 ou 49,90.');
       return;
     }
     setSaving(true);
     setNotice(null);
+    setFormError(null);
     try {
       if (editing === 'new') {
         await adminCouponService.createCoupon(toBody(form));
@@ -126,7 +142,7 @@ export default function AdminCupons() {
       setEditing(null);
       refetch();
     } catch (err) {
-      setNotice(errText(err, 'Não foi possível salvar o cupom.'));
+      setFormError(errText(err, 'Não foi possível salvar o cupom.'));
     } finally {
       setSaving(false);
     }
@@ -195,17 +211,15 @@ export default function AdminCupons() {
           </Select>
           <Input
             label={form.discountType === 'PERCENT' ? 'Valor (%)' : 'Valor (R$)'}
-            type="number"
-            min="0"
-            step="0.01"
+            inputMode="decimal"
+            placeholder={form.discountType === 'PERCENT' ? 'Ex.: 10' : 'Ex.: 20,00'}
             value={form.discountValue}
             onChange={set('discountValue')}
           />
           <Input
             label="Pedido mínimo (R$)"
-            type="number"
-            min="0"
-            step="0.01"
+            inputMode="decimal"
+            placeholder="Ex.: 149,90"
             value={form.minOrderAmount}
             onChange={set('minOrderAmount')}
           />
@@ -240,6 +254,11 @@ export default function AdminCupons() {
             <input type="checkbox" checked={form.active} onChange={set('active')} />
             Ativo
           </label>
+          {formError && (
+            <p role="alert" className="text-sm text-danger sm:col-span-2">
+              {formError}
+            </p>
+          )}
           <div className="flex gap-2 sm:col-span-2">
             <Button type="submit" size="sm" loading={saving}>
               {editing === 'new' ? 'Criar cupom' : 'Salvar'}

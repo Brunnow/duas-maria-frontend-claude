@@ -19,7 +19,7 @@ describe('AdminFreteGratis', () => {
     svc.getStoreSettings.mockResolvedValue({ freeShippingMinAmount: null });
     renderWithProviders(<AdminFreteGratis />, { preloadedState: adminAuth });
 
-    expect(await field()).toHaveValue(null);
+    expect(await field()).toHaveValue('');
     expect(screen.getByText('Desativado no momento.')).toBeInTheDocument();
   });
 
@@ -27,7 +27,7 @@ describe('AdminFreteGratis', () => {
     svc.getStoreSettings.mockResolvedValue({ freeShippingMinAmount: 299.9 });
     renderWithProviders(<AdminFreteGratis />, { preloadedState: adminAuth });
 
-    expect(await field()).toHaveValue(299.9);
+    expect(await field()).toHaveValue('299.9');
     expect(screen.getByText(/Ativo: frete grátis a partir de/)).toBeInTheDocument();
   });
 
@@ -43,6 +43,19 @@ describe('AdminFreteGratis', () => {
       expect(svc.saveStoreSettings).toHaveBeenCalledWith({ freeShippingMinAmount: 199.9 }),
     );
     expect(await screen.findByText('Frete grátis atualizado.')).toBeInTheDocument();
+  });
+
+  it('aceita valor com vírgula (teclado pt-BR do celular)', async () => {
+    svc.getStoreSettings.mockResolvedValue({ freeShippingMinAmount: null });
+    svc.saveStoreSettings.mockResolvedValue({ freeShippingMinAmount: 299.9 });
+    renderWithProviders(<AdminFreteGratis />, { preloadedState: adminAuth });
+
+    fireEvent.change(await field(), { target: { value: '299,90' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() =>
+      expect(svc.saveStoreSettings).toHaveBeenCalledWith({ freeShippingMinAmount: 299.9 }),
+    );
   });
 
   it('campo vazio desativa o frete gratis', async () => {
