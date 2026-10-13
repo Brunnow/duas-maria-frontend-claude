@@ -17,6 +17,12 @@ import { productImageUrl } from '@/lib/media';
 
 const errText = (err, fallback) => err?.response?.data?.message || fallback;
 
+// O backend responde em inglês quando o nome já existe na categoria.
+const saveErrText = (err) =>
+  err?.response?.data?.message === 'Product already exist!!'
+    ? 'Já existe um produto com esse nome nesta categoria.'
+    : errText(err, 'Não foi possível salvar o produto.');
+
 export default function AdminProdutos() {
   const dispatch = useDispatch();
   const categories = useSelector((state) => state.products.categories) || [];
@@ -33,6 +39,9 @@ export default function AdminProdutos() {
   const [saving, setSaving] = useState(false);
   const [rowBusy, setRowBusy] = useState(null);
   const [notice, setNotice] = useState(null);
+  // Erro do salvamento, mostrado junto ao botão do formulário (o `notice` fica
+  // no topo da página e, no celular, fora da tela de quem clicou em salvar).
+  const [formError, setFormError] = useState(null);
 
   useEffect(() => {
     dispatch(fetchCategories());
@@ -44,6 +53,7 @@ export default function AdminProdutos() {
   const handleSubmit = async ({ categoryId, product, variants }) => {
     setSaving(true);
     setNotice(null);
+    setFormError(null);
     try {
       if (product.productId) {
         await adminService.updateProduct(product.productId, product);
@@ -71,7 +81,7 @@ export default function AdminProdutos() {
         refetch();
       }
     } catch (err) {
-      setNotice(errText(err, 'Não foi possível salvar o produto.'));
+      setFormError(saveErrText(err));
     } finally {
       setSaving(false);
     }
@@ -106,7 +116,13 @@ export default function AdminProdutos() {
       <div className="flex items-center justify-between gap-4">
         <h2 className="font-display text-xl text-foreground">Produtos</h2>
         {editing === null && (
-          <Button size="sm" onClick={() => setEditing('new')}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setFormError(null);
+              setEditing('new');
+            }}
+          >
             Novo produto
           </Button>
         )}
@@ -124,8 +140,12 @@ export default function AdminProdutos() {
             product={editingProduct}
             categories={categories}
             submitting={saving}
+            error={formError}
             onSubmit={handleSubmit}
-            onCancel={() => setEditing(null)}
+            onCancel={() => {
+              setFormError(null);
+              setEditing(null);
+            }}
           />
         </div>
       )}
@@ -205,7 +225,10 @@ export default function AdminProdutos() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setEditing(product.productId)}
+                    onClick={() => {
+                      setFormError(null);
+                      setEditing(product.productId);
+                    }}
                     aria-label={`Editar ${product.productName}`}
                   >
                     <FiEdit2 size={15} />

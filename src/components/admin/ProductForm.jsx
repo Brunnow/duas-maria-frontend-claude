@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import VariantGridInput from '@/components/admin/VariantGridInput';
 import { toGridPayload } from '@/lib/variants';
-import { computeSpecialPrice, formatCurrency } from '@/lib/format';
+import { computeSpecialPrice, formatCurrency, parseDecimal } from '@/lib/format';
 import { minLength, required, validateForm } from '@/lib/validation';
 
 const baseSchema = {
@@ -25,7 +25,15 @@ function toForm(product) {
  * Formulario de produto (criar/editar). Na criacao pede a categoria;
  * a edicao nao troca de categoria (o backend nao expoe isso).
  */
-export default function ProductForm({ product, categories = [], onSubmit, onCancel, submitting }) {
+export default function ProductForm({
+  product,
+  categories = [],
+  onSubmit,
+  onCancel,
+  submitting,
+  error,
+}) {
+  const formRef = useRef(null);
   const isEdit = Boolean(product?.productId);
   const [values, setValues] = useState(() => toForm(product));
   const [categoryId, setCategoryId] = useState('');
@@ -38,7 +46,9 @@ export default function ProductForm({ product, categories = [], onSubmit, onCanc
     setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
-  const price = Number(values.price) || 0;
+  // Texto livre (não type="number"): no iPhone em pt-BR o teclado digita
+  // vírgula, e um input numérico pode devolver "" para "89,90" — o preço virava 0.
+  const price = parseDecimal(values.price) || 0;
   const discount = Number(values.discount) || 0;
   const specialPrice = computeSpecialPrice(price, discount);
 
@@ -49,7 +59,14 @@ export default function ProductForm({ product, categories = [], onSubmit, onCanc
     if (discount < 0 || discount > 90) found.discount = 'Desconto entre 0 e 90';
     if (!isEdit && !categoryId) found.categoryId = 'Escolha uma categoria';
     setErrors(found);
-    if (Object.keys(found).length > 0) return;
+    if (Object.keys(found).length > 0) {
+      // No celular o botão fica bem abaixo dos campos: leva até o primeiro erro,
+      // senão parece que "nada aconteceu".
+      requestAnimationFrame(() => {
+        formRef.current?.querySelector('[aria-invalid="true"]')?.focus();
+      });
+      return;
+    }
 
     onSubmit({
       categoryId: isEdit ? undefined : Number(categoryId),
@@ -66,7 +83,7 @@ export default function ProductForm({ product, categories = [], onSubmit, onCanc
   };
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="grid gap-4 sm:grid-cols-2">
+    <form ref={formRef} onSubmit={handleSubmit} noValidate className="grid gap-4 sm:grid-cols-2">
       <div className="sm:col-span-2">
         <Input
           label="Nome"
@@ -89,9 +106,8 @@ export default function ProductForm({ product, categories = [], onSubmit, onCanc
       <Input
         label="Preço (R$)"
         name="price"
-        type="number"
-        step="0.01"
-        min="0"
+        inputMode="decimal"
+        placeholder="Ex.: 89,90"
         value={values.price}
         onChange={handleChange}
         error={errors.price}
@@ -113,8 +129,11 @@ export default function ProductForm({ product, categories = [], onSubmit, onCanc
           <Select
             label="Categoria"
             value={categoryId}
-            onChange={(event) => setCategoryId(event.target.value)}
-            error={errors.categoryId}
+            onChange={(event) => {
+              setCategoryId(event.target.value);
+              setErrors((prev) => ({ ...prev, categoryId: undefined }));
+            }}
+            aria-invalid={errors.categoryId ? true : undefined}
           >
             <option value="">Selecione…</option>
             {categories.map((c) => (
@@ -135,6 +154,12 @@ export default function ProductForm({ product, categories = [], onSubmit, onCanc
         <div className="sm:col-span-2">
           <VariantGridInput value={variants} onChange={setVariants} />
         </div>
+      )}
+
+      {error && (
+        <p role="alert" className="text-sm text-danger sm:col-span-2">
+          {error}
+        </p>
       )}
 
       <div className="flex gap-3 sm:col-span-2">

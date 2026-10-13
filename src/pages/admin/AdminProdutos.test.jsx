@@ -84,6 +84,49 @@ describe('AdminProdutos', () => {
     expect(adminService.createVariants).not.toHaveBeenCalled();
   });
 
+  it('aceita preço com vírgula (teclado pt-BR do celular)', async () => {
+    adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
+    adminService.createProduct.mockResolvedValue({ productId: 9 });
+
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Nenhum produto');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo produto' }));
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Blusa Linho' } });
+    fireEvent.change(screen.getByLabelText('Descrição'), { target: { value: 'Blusa de linho' } });
+    fireEvent.change(screen.getByLabelText('Preço (R$)'), { target: { value: '89,90' } });
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar produto' }));
+
+    await waitFor(() =>
+      expect(adminService.createProduct).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({ price: 89.9, specialPrice: 89.9 }),
+      ),
+    );
+  });
+
+  it('mostra o erro do servidor junto ao botão de criar', async () => {
+    adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
+    adminService.createProduct.mockRejectedValue({
+      response: { data: { message: 'Product already exist!!' } },
+    });
+
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Nenhum produto');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo produto' }));
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Blusa Linho' } });
+    fireEvent.change(screen.getByLabelText('Descrição'), { target: { value: 'Blusa de linho' } });
+    fireEvent.change(screen.getByLabelText('Preço (R$)'), { target: { value: '89,90' } });
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar produto' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Já existe um produto com esse nome nesta categoria.',
+    );
+  });
+
   it('cria o produto e a grade de tamanhos de forma integrada', async () => {
     adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
     adminService.createProduct.mockResolvedValue({ productId: 42 });

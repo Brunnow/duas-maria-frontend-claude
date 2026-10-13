@@ -45,6 +45,18 @@ export function formatCurrency(value) {
 }
 
 /**
+ * Converte um valor digitado em reais para número, aceitando o formato
+ * brasileiro ("89,90", "1.299,90") e o com ponto ("89.90").
+ * Retorna NaN quando não é um número.
+ */
+export function parseDecimal(value) {
+  const text = String(value ?? '').trim().replace(/\s|R\$/g, '');
+  if (text === '') return NaN;
+  const normalized = text.includes(',') ? text.replace(/\./g, '').replace(',', '.') : text;
+  return Number(normalized);
+}
+
+/**
  * Percentual de desconto entre o preco cheio e o preco promocional,
  * arredondado. Retorna null quando nao ha desconto valido.
  */
