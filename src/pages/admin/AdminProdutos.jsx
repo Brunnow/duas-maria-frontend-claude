@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { FiEdit2, FiImage, FiTag, FiTrash2 } from 'react-icons/fi';
 import Button from '@/components/ui/Button';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/shared/EmptyState';
@@ -37,7 +38,7 @@ export default function AdminProdutos() {
   const [managingImages, setManagingImages] = useState(null); // null | productId
   const [managingVariants, setManagingVariants] = useState(null); // null | productId
   const [saving, setSaving] = useState(false);
-  const [rowBusy, setRowBusy] = useState(null);
+  const [toDelete, setToDelete] = useState(null); // produto aguardando confirmação
   const [notice, setNotice] = useState(null);
   // Erro do salvamento, mostrado junto ao botão do formulário (o `notice` fica
   // no topo da página e, no celular, fora da tela de quem clicou em salvar).
@@ -87,18 +88,15 @@ export default function AdminProdutos() {
     }
   };
 
-  const handleDelete = async (productId) => {
-    if (!window.confirm('Excluir este produto?')) return;
-    setRowBusy(productId);
-    setNotice(null);
-    try {
-      await adminService.deleteProduct(productId);
-      refetch();
-    } catch (err) {
-      setNotice(errText(err, 'Não foi possível excluir o produto.'));
-    } finally {
-      setRowBusy(null);
-    }
+  // Erros sobem para o ConfirmDialog, que os mostra dentro do próprio diálogo.
+  const confirmDelete = async () => {
+    const { productId, productName } = toDelete;
+    await adminService.deleteProduct(productId);
+    if (editing === productId) setEditing(null);
+    if (managingImages === productId) setManagingImages(null);
+    if (managingVariants === productId) setManagingVariants(null);
+    setNotice(`Produto “${productName}” excluído.`);
+    refetch();
   };
 
   const closeImages = () => {
@@ -236,8 +234,10 @@ export default function AdminProdutos() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDelete(product.productId)}
-                    loading={rowBusy === product.productId}
+                    onClick={() => {
+                      setNotice(null);
+                      setToDelete(product);
+                    }}
                     aria-label={`Excluir ${product.productName}`}
                   >
                     <FiTrash2 size={15} />
@@ -250,6 +250,21 @@ export default function AdminProdutos() {
       </div>
 
       <Pagination className="mt-8" page={page} totalPages={totalPages} onChange={setPage} />
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Excluir produto"
+        description={
+          <>
+            Tem certeza que deseja excluir <strong>{toDelete?.productName}</strong>? Essa ação não
+            pode ser desfeita.
+          </>
+        }
+        confirmLabel="Excluir produto"
+        errorFallback="Não foi possível excluir o produto."
+        onConfirm={confirmDelete}
+        onClose={() => setToDelete(null)}
+      />
     </div>
   );
 }

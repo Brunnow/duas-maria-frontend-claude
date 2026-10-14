@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Skeleton from '@/components/ui/Skeleton';
@@ -90,6 +91,7 @@ export default function AdminCupons() {
   const [saving, setSaving] = useState(false);
   const [rowBusy, setRowBusy] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [toDelete, setToDelete] = useState(null); // cupom aguardando confirmação
   // Erro do formulário, mostrado junto ao botão (o `notice` fica no topo e,
   // no celular, fora da tela de quem clicou em salvar).
   const [formError, setFormError] = useState(null);
@@ -167,18 +169,12 @@ export default function AdminCupons() {
     [refetch],
   );
 
-  const handleDelete = async (coupon) => {
-    if (!window.confirm(`Excluir o cupom ${coupon.code}?`)) return;
-    setRowBusy(coupon.id);
-    setNotice(null);
-    try {
-      await adminCouponService.deleteCoupon(coupon.id);
-      refetch();
-    } catch (err) {
-      setNotice(errText(err, 'Não foi possível excluir o cupom.'));
-    } finally {
-      setRowBusy(null);
-    }
+  // Erros sobem para o ConfirmDialog, que os mostra dentro do próprio diálogo.
+  const confirmDelete = async () => {
+    await adminCouponService.deleteCoupon(toDelete.id);
+    if (editing === toDelete.id) setEditing(null);
+    setNotice(`Cupom ${toDelete.code} excluído.`);
+    refetch();
   };
 
   return (
@@ -320,8 +316,10 @@ export default function AdminCupons() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDelete(coupon)}
-                    loading={rowBusy === coupon.id}
+                    onClick={() => {
+                      setNotice(null);
+                      setToDelete(coupon);
+                    }}
                     aria-label={`Excluir ${coupon.code}`}
                   >
                     <FiTrash2 size={15} />
@@ -332,6 +330,21 @@ export default function AdminCupons() {
           </ul>
         )}
       </div>
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Excluir cupom"
+        description={
+          <>
+            Tem certeza que deseja excluir o cupom <strong>{toDelete?.code}</strong>? Essa ação não
+            pode ser desfeita.
+          </>
+        }
+        confirmLabel="Excluir cupom"
+        errorFallback="Não foi possível excluir o cupom."
+        onConfirm={confirmDelete}
+        onClose={() => setToDelete(null)}
+      />
     </div>
   );
 }

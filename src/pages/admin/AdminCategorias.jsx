@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { FiCheck, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
 import Button from '@/components/ui/Button';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import Input from '@/components/ui/Input';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/shared/EmptyState';
@@ -24,6 +25,7 @@ export default function AdminCategorias() {
   const [editName, setEditName] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [toDelete, setToDelete] = useState(null); // categoria aguardando confirmação
 
   const run = useCallback(
     async (fn) => {
@@ -67,9 +69,11 @@ export default function AdminCategorias() {
     }
   };
 
-  const handleDelete = (categoryId) => {
-    if (!window.confirm('Excluir esta categoria?')) return;
-    run(() => adminService.deleteCategory(categoryId));
+  // Erros sobem para o ConfirmDialog, que os mostra dentro do próprio diálogo.
+  const confirmDelete = async () => {
+    await adminService.deleteCategory(toDelete.categoryId);
+    setNotice(`Categoria “${toDelete.categoryName}” excluída.`);
+    refetch();
   };
 
   return (
@@ -154,7 +158,10 @@ export default function AdminCategorias() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete(category.categoryId)}
+                      onClick={() => {
+                        setNotice(null);
+                        setToDelete(category);
+                      }}
                       aria-label={`Excluir ${category.categoryName}`}
                     >
                       <FiTrash2 size={15} />
@@ -166,6 +173,21 @@ export default function AdminCategorias() {
           </ul>
         )}
       </div>
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Excluir categoria"
+        description={
+          <>
+            Tem certeza que deseja excluir a categoria <strong>{toDelete?.categoryName}</strong>?
+            Essa ação não pode ser desfeita.
+          </>
+        }
+        confirmLabel="Excluir categoria"
+        errorFallback="Não foi possível excluir a categoria."
+        onConfirm={confirmDelete}
+        onClose={() => setToDelete(null)}
+      />
     </div>
   );
 }

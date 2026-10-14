@@ -119,12 +119,14 @@ describe('AdminCupons', () => {
         data: { message: 'Este cupom já foi utilizado em pedidos; desative-o em vez de excluir.' },
       },
     });
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderWithProviders(<AdminCupons />, { preloadedState: adminAuth });
     await screen.findByText('PROMO10');
 
     fireEvent.click(screen.getByRole('button', { name: 'Excluir PROMO10' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Excluir cupom' }));
 
-    expect(await screen.findByText(/desative-o em vez de excluir/)).toBeInTheDocument();
+    // O erro aparece dentro do diálogo, que continua aberto.
+    expect(await screen.findByRole('alert')).toHaveTextContent(/desative-o em vez de excluir/);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });

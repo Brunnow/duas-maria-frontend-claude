@@ -10,6 +10,7 @@ const variants = {
   primary: 'bg-accent text-accent-fg hover:bg-accent-hover',
   secondary: 'border border-foreground/20 text-foreground hover:bg-subtle',
   ghost: 'text-foreground hover:bg-subtle',
+  danger: 'bg-danger text-white hover:bg-danger/90 focus-visible:ring-danger/40',
   link: 'text-accent p-0 h-auto underline-offset-4 hover:underline',
 };
 

@@ -54,6 +54,37 @@ describe('AdminProdutos', () => {
     expect(await screen.findByText('Vestido Midi')).toBeInTheDocument();
   });
 
+  it('exclui um produto após confirmar no diálogo', async () => {
+    adminService.listProducts.mockResolvedValue(PAGE);
+    adminService.deleteProduct.mockResolvedValue({});
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Vestido Midi');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir Vestido Midi' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Vestido Midi');
+    expect(adminService.deleteProduct).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir produto' }));
+
+    await waitFor(() => expect(adminService.deleteProduct).toHaveBeenCalledWith(1));
+    expect(await screen.findByText('Produto “Vestido Midi” excluído.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('cancelar o diálogo não exclui', async () => {
+    adminService.listProducts.mockResolvedValue(PAGE);
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Vestido Midi');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir Vestido Midi' }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(adminService.deleteProduct).not.toHaveBeenCalled();
+  });
+
   it('cria um produto pelo formulario', async () => {
     adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
     adminService.createProduct.mockResolvedValue({ productId: 9 });
