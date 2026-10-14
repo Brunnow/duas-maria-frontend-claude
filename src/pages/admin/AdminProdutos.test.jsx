@@ -137,6 +137,66 @@ describe('AdminProdutos', () => {
     );
   });
 
+  it('aceita descrição maior que 255 caracteres (limite antigo)', async () => {
+    adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
+    adminService.createProduct.mockResolvedValue({ productId: 9 });
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Nenhum produto');
+
+    const longText = 'Vestido em viscose. '.repeat(20); // 400 caracteres
+    fireEvent.click(screen.getByRole('button', { name: 'Novo produto' }));
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Vestido Longo' } });
+    fireEvent.change(screen.getByLabelText('Descrição'), { target: { value: longText } });
+    fireEvent.change(screen.getByLabelText('Preço (R$)'), { target: { value: '199,90' } });
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: '7' } });
+
+    expect(screen.getByText('400 / 2000')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Criar produto' }));
+
+    await waitFor(() =>
+      expect(adminService.createProduct).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({ description: longText.trim() }),
+      ),
+    );
+  });
+
+  it('bloqueia descrição acima de 2000 caracteres sem chamar a API', async () => {
+    adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Nenhum produto');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo produto' }));
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Vestido Longo' } });
+    fireEvent.change(screen.getByLabelText('Descrição'), { target: { value: 'a'.repeat(2001) } });
+    fireEvent.change(screen.getByLabelText('Preço (R$)'), { target: { value: '199,90' } });
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar produto' }));
+
+    expect(await screen.findByText('Máximo de 2000 caracteres')).toBeInTheDocument();
+    expect(adminService.createProduct).not.toHaveBeenCalled();
+  });
+
+  it('mostra a mensagem de validação do backend (400 por campo)', async () => {
+    adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
+    adminService.createProduct.mockRejectedValue({
+      response: { data: { description: 'A descrição deve ter no máximo 2000 caracteres' } },
+    });
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Nenhum produto');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo produto' }));
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Vestido Longo' } });
+    fireEvent.change(screen.getByLabelText('Descrição'), { target: { value: 'Vestido longo' } });
+    fireEvent.change(screen.getByLabelText('Preço (R$)'), { target: { value: '199,90' } });
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Criar produto' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'A descrição deve ter no máximo 2000 caracteres',
+    );
+  });
+
   it('mostra o erro do servidor junto ao botão de criar', async () => {
     adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
     adminService.createProduct.mockRejectedValue({

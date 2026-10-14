@@ -1,15 +1,28 @@
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import VariantGridInput from '@/components/admin/VariantGridInput';
 import { toGridPayload } from '@/lib/variants';
 import { computeSpecialPrice, formatCurrency, parseDecimal } from '@/lib/format';
-import { minLength, required, validateForm } from '@/lib/validation';
+import { cn } from '@/lib/cn';
+import { maxLength, minLength, required, validateForm } from '@/lib/validation';
+
+// Limites das colunas no backend (products.product_name / products.description).
+const NAME_MAX = 255;
+const DESCRIPTION_MAX = 2000;
 
 const baseSchema = {
-  productName: [required('Informe o nome'), minLength(3, 'Mínimo de 3 caracteres')],
-  description: [required('Informe a descrição'), minLength(6, 'Mínimo de 6 caracteres')],
+  productName: [
+    required('Informe o nome'),
+    minLength(3, 'Mínimo de 3 caracteres'),
+    maxLength(NAME_MAX, `Máximo de ${NAME_MAX} caracteres`),
+  ],
+  description: [
+    required('Informe a descrição'),
+    minLength(6, 'Mínimo de 6 caracteres'),
+    maxLength(DESCRIPTION_MAX, `Máximo de ${DESCRIPTION_MAX} caracteres`),
+  ],
 };
 
 function toForm(product) {
@@ -34,6 +47,7 @@ export default function ProductForm({
   error,
 }) {
   const formRef = useRef(null);
+  const descriptionId = useId();
   const isEdit = Boolean(product?.productId);
   const [values, setValues] = useState(() => toForm(product));
   const [categoryId, setCategoryId] = useState('');
@@ -93,14 +107,38 @@ export default function ProductForm({
           error={errors.productName}
         />
       </div>
-      <div className="sm:col-span-2">
-        <Input
-          label="Descrição"
+      <div className="flex flex-col gap-1.5 sm:col-span-2">
+        <label
+          htmlFor={descriptionId}
+          className="text-xs font-medium uppercase tracking-wider text-muted"
+        >
+          Descrição
+        </label>
+        <textarea
+          id={descriptionId}
           name="description"
+          rows={5}
           value={values.description}
           onChange={handleChange}
-          error={errors.description}
+          aria-invalid={errors.description ? true : undefined}
+          aria-describedby={`${descriptionId}-help`}
+          className={cn(
+            'w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-foreground',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40',
+            errors.description && 'border-danger focus-visible:ring-danger/30',
+          )}
         />
+        <div id={`${descriptionId}-help`} className="flex justify-between gap-3 text-xs">
+          <span className="text-danger">{errors.description}</span>
+          <span
+            className={cn(
+              'shrink-0 tabular-nums',
+              values.description.length > DESCRIPTION_MAX ? 'text-danger' : 'text-muted',
+            )}
+          >
+            {values.description.length} / {DESCRIPTION_MAX}
+          </span>
+        </div>
       </div>
 
       <Input

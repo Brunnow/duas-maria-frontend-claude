@@ -18,11 +18,18 @@ import { productImageUrl } from '@/lib/media';
 
 const errText = (err, fallback) => err?.response?.data?.message || fallback;
 
-// O backend responde em inglês quando o nome já existe na categoria.
-const saveErrText = (err) =>
-  err?.response?.data?.message === 'Product already exist!!'
-    ? 'Já existe um produto com esse nome nesta categoria.'
-    : errText(err, 'Não foi possível salvar o produto.');
+// O backend responde em inglês quando o nome já existe na categoria, e a
+// validação (400) vem como { campo: mensagem }, sem `message`.
+const saveErrText = (err) => {
+  const data = err?.response?.data;
+  if (data?.message === 'Product already exist!!') {
+    return 'Já existe um produto com esse nome nesta categoria.';
+  }
+  if (!data?.message && (data?.description || data?.productName)) {
+    return data.description || data.productName;
+  }
+  return errText(err, 'Não foi possível salvar o produto.');
+};
 
 export default function AdminProdutos() {
   const dispatch = useDispatch();
