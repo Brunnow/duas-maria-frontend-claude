@@ -18,7 +18,12 @@ export default function Login() {
   const location = useLocation();
   const isAuthenticated = useSelector(selectIsAuthenticated);
 
-  const from = location.state?.from?.pathname || '/';
+  // Página de onde a pessoa veio (ex.: o produto que ela tentou pôr no
+  // carrinho). Inclui a query string, para não perder filtros do catálogo.
+  const fromLocation = location.state?.from;
+  const from = fromLocation?.pathname
+    ? `${fromLocation.pathname}${fromLocation.search || ''}`
+    : '/';
   const justRegistered = location.state?.registered === true;
   const intentMessage = location.state?.message;
 
@@ -64,7 +69,13 @@ export default function Login() {
         <h1 className="font-display text-3xl text-foreground">Entrar</h1>
         <p className="mt-2 text-sm text-muted">
           Ainda não tem conta?{' '}
-          <Link to="/cadastro" className="text-accent hover:underline">
+          {/* Leva junto a página de origem: quem cria a conta no meio da
+              compra volta para o produto, não para a home. */}
+          <Link
+            to="/cadastro"
+            state={fromLocation ? { from: fromLocation } : undefined}
+            className="text-accent hover:underline"
+          >
             Criar conta
           </Link>
         </p>

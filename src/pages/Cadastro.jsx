@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
 import Input from '@/components/ui/Input';
@@ -25,7 +25,11 @@ const schema = {
 export default function Cadastro() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  // Página de origem vinda do login (ex.: o produto da compra) — repassada de
+  // volta para o login, que redireciona para ela depois de entrar.
+  const fromLocation = location.state?.from;
 
   const [values, setValues] = useState({ username: '', email: '', password: '', confirm: '' });
   const [errors, setErrors] = useState({});
@@ -61,7 +65,10 @@ export default function Cadastro() {
           password: values.password,
         }),
       ).unwrap();
-      navigate('/login', { replace: true, state: { registered: true } });
+      navigate('/login', {
+        replace: true,
+        state: { registered: true, ...(fromLocation ? { from: fromLocation } : {}) },
+      });
     } catch (message) {
       setFormError(typeof message === 'string' ? message : 'Não foi possível concluir o cadastro.');
     } finally {
@@ -75,7 +82,11 @@ export default function Cadastro() {
         <h1 className="font-display text-3xl text-foreground">Criar conta</h1>
         <p className="mt-2 text-sm text-muted">
           Já tem conta?{' '}
-          <Link to="/login" className="text-accent hover:underline">
+          <Link
+            to="/login"
+            state={fromLocation ? { from: fromLocation } : undefined}
+            className="text-accent hover:underline"
+          >
             Entrar
           </Link>
         </p>
