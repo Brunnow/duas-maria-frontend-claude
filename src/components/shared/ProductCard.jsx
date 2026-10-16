@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button';
 import Price from '@/components/ui/Price';
 import { truncateText } from '@/components/utils/truncateText';
 import { discountPercent } from '@/lib/format';
+import OptimizedImage from '@/components/shared/OptimizedImage';
 
 /**
  * Card de produto — orientado a imagem. A imagem e o nome levam a pagina
@@ -32,7 +33,7 @@ export default function ProductCard({
           className="block aspect-[3/4] w-full overflow-hidden rounded-card bg-subtle"
         >
           {image ? (
-            <img
+            <OptimizedImage
               src={image}
               alt={productName}
               loading="lazy"

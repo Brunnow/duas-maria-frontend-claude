@@ -18,6 +18,7 @@ import {
 } from '@/lib/shipping';
 import { productImageUrl } from '@/lib/media';
 import { addressLines } from '@/lib/address';
+import OptimizedImage from '@/components/shared/OptimizedImage';
 
 // Mesma resposta (404) para "pedido inexistente" e "pedido de outro
 // usuário" — tratamos as duas como "não encontrado" com uma mensagem
@@ -84,7 +85,7 @@ export default function PedidoDetalhe() {
                 <li key={item.orderItemId} className="flex items-center gap-4 py-4">
                   <div className="h-16 w-13 shrink-0 overflow-hidden rounded-card bg-subtle">
                     {item.product?.image && (
-                      <img
+                      <OptimizedImage
                         src={productImageUrl(item.product.image)}
                         alt=""
                         className="h-full w-full object-cover"

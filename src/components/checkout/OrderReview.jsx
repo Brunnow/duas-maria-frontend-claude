@@ -1,6 +1,7 @@
 import { formatCurrency } from '@/lib/format';
 import { addressLines } from '@/lib/address';
 import { formatShipping, shippingOptionLabel } from '@/lib/shipping';
+import OptimizedImage from '@/components/shared/OptimizedImage';
 
 export default function OrderReview({ items, address, shipping, coupon }) {
   const productsTotal = items.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
@@ -20,7 +21,7 @@ export default function OrderReview({ items, address, shipping, coupon }) {
             <li key={item.cartItemId} className="flex items-center gap-3 py-3 text-sm">
               <div className="h-16 w-12 shrink-0 overflow-hidden rounded-card bg-subtle">
                 {item.image && (
-                  <img
+                  <OptimizedImage
                     src={item.image}
                     alt={item.productName}
                     className="h-full w-full object-cover"

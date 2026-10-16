@@ -7,6 +7,7 @@ import 'swiper/css';
 import api from '@/api/api';
 import Container from '@/components/ui/Container';
 import Skeleton from '@/components/ui/Skeleton';
+import OptimizedImage from '@/components/shared/OptimizedImage';
 
 const arrowButtonClass =
   'absolute top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center ' +
@@ -106,7 +107,7 @@ export default function CategoryShowcase() {
                   to={`/produtos?category=${encodeURIComponent(c.categoryName)}`}
                   className="group relative block aspect-[4/5] w-full overflow-hidden rounded-card bg-subtle"
                 >
-                  <img
+                  <OptimizedImage
                     src={c.image}
                     alt={c.categoryName}
                     loading="lazy"

@@ -16,6 +16,7 @@ import * as adminService from '@/services/adminService';
 import { fetchCategories } from '@/store/actions';
 import { formatCurrency } from '@/lib/format';
 import { productImageUrl } from '@/lib/media';
+import OptimizedImage from '@/components/shared/OptimizedImage';
 
 const errText = (err, fallback) => err?.response?.data?.message || fallback;
 
@@ -253,7 +254,7 @@ export default function AdminProdutos() {
             {list.map((product) => (
               <li key={product.productId} className="flex items-center gap-3 py-3">
                 <div className="h-14 w-11 shrink-0 overflow-hidden rounded-card bg-subtle">
-                  <img
+                  <OptimizedImage
                     src={productImageUrl(product.image)}
                     alt=""
                     className="h-full w-full object-cover"

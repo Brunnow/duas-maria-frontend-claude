@@ -5,6 +5,7 @@ import { FiMinus, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { decrementItem, incrementItem, removeItem } from '@/features/cart/cartSlice';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import OptimizedImage from '@/components/shared/OptimizedImage';
 
 /**
  * Linha do carrinho — usada no CartDrawer e na pagina /carrinho.
@@ -38,7 +39,11 @@ export default function CartLineItem({ item, cartId, compact = false }) {
         )}
       >
         {item.image ? (
-          <img src={item.image} alt={item.productName} className="h-full w-full object-cover" />
+          <OptimizedImage
+            src={item.image}
+            alt={item.productName}
+            className="h-full w-full object-cover"
+          />
         ) : (
           <span className="flex h-full w-full items-center justify-center text-[10px] text-muted">
             sem imagem

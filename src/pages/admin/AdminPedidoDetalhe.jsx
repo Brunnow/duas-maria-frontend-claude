@@ -29,6 +29,7 @@ import {
 } from '@/lib/shipping';
 import { productImageUrl } from '@/lib/media';
 import { addressLines } from '@/lib/address';
+import OptimizedImage from '@/components/shared/OptimizedImage';
 
 const WEBHOOK_EVENT_STATUS_LABEL = {
   RECEIVED: 'Recebido',
@@ -255,7 +256,7 @@ export default function AdminPedidoDetalhe() {
                     <li key={item.orderItemId} className="flex items-center gap-4 py-4">
                       <div className="h-16 w-13 shrink-0 overflow-hidden rounded-card bg-subtle">
                         {item.product?.image && (
-                          <img
+                          <OptimizedImage
                             src={productImageUrl(item.product.image)}
                             alt=""
                             className="h-full w-full object-cover"

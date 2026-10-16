@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { cn } from '@/lib/cn';
+import OptimizedImage from '@/components/shared/OptimizedImage';
 
 /*
  * Galeria da Página de Produto. Recebe `images` (do ProductDTO.images:
@@ -29,8 +30,9 @@ export default function ProductGallery({ images, image, alt, className }) {
       <div className="overflow-hidden rounded-card bg-subtle">
         <div className="aspect-[3/4] w-full">
           {showImage ? (
-            <img
+            <OptimizedImage
               src={current.url}
+              size="large"
               alt={current.alt}
               onError={() => setErrored((e) => ({ ...e, [safeActive]: true }))}
               className="h-full w-full object-cover"
@@ -57,7 +59,7 @@ export default function ProductGallery({ images, image, alt, className }) {
                   i === safeActive ? 'border-accent ring-1 ring-accent' : 'border-border',
                 )}
               >
-                <img src={img.url} alt="" className="h-full w-full object-cover" />
+                <OptimizedImage src={img.url} alt="" className="h-full w-full object-cover" />
               </button>
             </li>
           ))}
