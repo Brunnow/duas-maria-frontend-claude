@@ -24,7 +24,7 @@ export default function CheckoutRetorno() {
   const orderId = searchParams.get('orderId');
   const dispatch = useDispatch();
 
-  // loading | waiting | approved | rejected | timeout | error
+  // loading | waiting | approved | rejected | cancelled | timeout | error
   const [phase, setPhase] = useState(orderId ? 'loading' : 'error');
   const [order, setOrder] = useState(null);
   const [retrying, setRetrying] = useState(false);
@@ -43,6 +43,11 @@ export default function CheckoutRetorno() {
         if (!alive) return;
         setOrder(dto);
 
+        // Cancelado (abandono, admin ou estorno): não há o que esperar nem pagar de novo.
+        if (dto.orderStatus === 'CANCELADO') {
+          setPhase('cancelled');
+          return;
+        }
         if (dto.paymentStatus === 'APPROVED') {
           setPhase('approved');
           dispatch(fetchCart()); // o backend já esvaziou o carrinho ao aprovar
@@ -127,6 +132,28 @@ export default function CheckoutRetorno() {
             </Button>
             <Button as={Link} to="/carrinho" variant="secondary">
               Voltar ao carrinho
+            </Button>
+          </div>
+        </div>
+      </Container>
+    );
+  }
+
+  if (phase === 'cancelled') {
+    return (
+      <Container className="py-16">
+        <div className="mx-auto max-w-md text-center">
+          <p className="font-display text-2xl text-foreground">Pedido cancelado</p>
+          <p className="mt-2 text-sm text-muted">
+            Este pedido foi cancelado e não pode mais ser pago. Se ainda quiser as peças, é só
+            fazer um novo pedido pelo carrinho.
+          </p>
+          <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Button as={Link} to="/carrinho">
+              Ir para o carrinho
+            </Button>
+            <Button as={Link} to={`/pedidos/${order.orderId}`} variant="secondary">
+              Ver o pedido
             </Button>
           </div>
         </div>

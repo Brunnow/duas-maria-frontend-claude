@@ -94,4 +94,18 @@ describe('CheckoutRetorno', () => {
 
     expect(await screen.findByText('Não encontramos esse pedido')).toBeInTheDocument();
   });
+
+  it('pedido cancelado nao oferece pagar de novo nem fica esperando', async () => {
+    fetchOrderById.mockResolvedValue({
+      ...ORDER,
+      paymentStatus: 'REJECTED',
+      orderStatus: 'CANCELADO',
+    });
+    renderRetorno();
+
+    expect(await screen.findByText('Pedido cancelado')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ir para o carrinho' })).toHaveAttribute('href', '/carrinho');
+    expect(fetchOrderById).toHaveBeenCalledTimes(1);
+  });
 });
