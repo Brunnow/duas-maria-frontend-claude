@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { FiEdit2, FiImage, FiTag, FiTrash2 } from 'react-icons/fi';
+import { FiEdit2, FiImage, FiSearch, FiTag, FiTrash2 } from 'react-icons/fi';
 import Button from '@/components/ui/Button';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import Input from '@/components/ui/Input';
 import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/shared/EmptyState';
@@ -36,12 +37,22 @@ export default function AdminProdutos() {
   const categories = useSelector((state) => state.products.categories) || [];
 
   const [page, setPage] = useState(1);
-  const fetcher = useCallback(() => adminService.listProducts({ pageNumber: page - 1 }), [page]);
-  const { status, data, error, refetch } = useFetch(fetcher, [page]);
+  // Busca aplicada (vai para a API) vs. o que está sendo digitado.
+  const [query, setQuery] = useState('');
+  const [draft, setDraft] = useState('');
+  const fetcher = useCallback(
+    () => adminService.listProducts({ pageNumber: page - 1, keyword: query || undefined }),
+    [page, query],
+  );
+  const { status, data, error, refetch } = useFetch(fetcher, [page, query]);
   const list = data?.content || [];
   const totalPages = data?.totalPages || 0;
+  const total = data?.totalElements;
 
-  const [editing, setEditing] = useState(null); // null | 'new' | productId
+  // Guarda o próprio produto (não só o id): se a lista mudar com o formulário
+  // aberto (busca, outra página), a edição continua sendo edição — antes o
+  // produto "sumia" da lista e o salvar virava criação de um produto novo.
+  const [editing, setEditing] = useState(null); // null | 'new' | produto
   const [managingImages, setManagingImages] = useState(null); // null | productId
   const [managingVariants, setManagingVariants] = useState(null); // null | productId
   const [saving, setSaving] = useState(false);
@@ -55,8 +66,19 @@ export default function AdminProdutos() {
     dispatch(fetchCategories());
   }, [dispatch]);
 
-  const editingProduct =
-    typeof editing === 'number' ? list.find((p) => p.productId === editing) : null;
+  const editingProduct = editing && editing !== 'new' ? editing : null;
+
+  const applySearch = (event) => {
+    event.preventDefault();
+    setPage(1);
+    setQuery(draft.trim());
+  };
+
+  const clearSearch = () => {
+    setDraft('');
+    setPage(1);
+    setQuery('');
+  };
 
   const handleSubmit = async ({ categoryId, product, variants }) => {
     setSaving(true);
@@ -99,7 +121,7 @@ export default function AdminProdutos() {
   const confirmDelete = async () => {
     const { productId, productName } = toDelete;
     await adminService.deleteProduct(productId);
-    if (editing === productId) setEditing(null);
+    if (editingProduct?.productId === productId) setEditing(null);
     if (managingImages === productId) setManagingImages(null);
     if (managingVariants === productId) setManagingVariants(null);
     setNotice(`Produto “${productName}” excluído.`);
@@ -142,6 +164,10 @@ export default function AdminProdutos() {
       {editing !== null && (
         <div className="mt-5 rounded-card border border-border p-5">
           <ProductForm
+            // Remonta ao trocar de produto: o formulário guarda os valores no
+            // próprio estado e, sem isto, editar B com A aberto salvava os
+            // dados de A em B.
+            key={editingProduct?.productId ?? 'new'}
             product={editingProduct}
             categories={categories}
             submitting={saving}
@@ -171,7 +197,33 @@ export default function AdminProdutos() {
         </div>
       )}
 
-      <div className="mt-5">
+      <form onSubmit={applySearch} role="search" className="mt-5 flex items-end gap-2">
+        <div className="min-w-0 flex-1">
+          <Input
+            label="Buscar produto"
+            type="search"
+            placeholder="Nome do produto"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+          />
+        </div>
+        <Button type="submit" variant="secondary" aria-label="Buscar">
+          <FiSearch size={16} />
+        </Button>
+        {query && (
+          <Button type="button" variant="ghost" onClick={clearSearch}>
+            Limpar
+          </Button>
+        )}
+      </form>
+
+      {status === 'ready' && query && total != null && (
+        <p className="mt-3 text-xs text-muted">
+          {total === 1 ? '1 produto encontrado' : `${total} produtos encontrados`} para “{query}”.
+        </p>
+      )}
+
+      <div className="mt-3">
         {status === 'loading' ? (
           <div className="flex flex-col gap-2">
             <Skeleton className="h-14" />
@@ -188,7 +240,14 @@ export default function AdminProdutos() {
             }
           />
         ) : list.length === 0 ? (
-          <EmptyState title="Nenhum produto" description="Crie o primeiro produto." />
+          query ? (
+            <EmptyState
+              title="Nenhum produto encontrado"
+              description={`Nenhum produto com “${query}” no nome.`}
+            />
+          ) : (
+            <EmptyState title="Nenhum produto" description="Crie o primeiro produto." />
+          )
         ) : (
           <ul className="divide-y divide-border border-y border-border">
             {list.map((product) => (
@@ -232,7 +291,7 @@ export default function AdminProdutos() {
                     size="sm"
                     onClick={() => {
                       setFormError(null);
-                      setEditing(product.productId);
+                      setEditing(product);
                     }}
                     aria-label={`Editar ${product.productName}`}
                   >

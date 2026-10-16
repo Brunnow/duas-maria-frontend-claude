@@ -256,4 +256,84 @@ describe('AdminProdutos', () => {
     fireEvent.click(screen.getByLabelText('Tamanho P'));
     expect(screen.getByLabelText('Tamanho Único')).toBeDisabled();
   });
+  it('busca produtos pelo nome e volta para a primeira página', async () => {
+    adminService.listProducts.mockResolvedValue(PAGE);
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Vestido Midi');
+    expect(adminService.listProducts).toHaveBeenLastCalledWith({
+      pageNumber: 0,
+      keyword: undefined,
+    });
+
+    adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0, totalElements: 0 });
+    fireEvent.change(screen.getByLabelText('Buscar produto'), { target: { value: '  saia ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+
+    await waitFor(() =>
+      expect(adminService.listProducts).toHaveBeenLastCalledWith({ pageNumber: 0, keyword: 'saia' }),
+    );
+    expect(await screen.findByText('Nenhum produto encontrado')).toBeInTheDocument();
+
+    adminService.listProducts.mockResolvedValue(PAGE);
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar' }));
+    expect(await screen.findByText('Vestido Midi')).toBeInTheDocument();
+    expect(adminService.listProducts).toHaveBeenLastCalledWith({
+      pageNumber: 0,
+      keyword: undefined,
+    });
+  });
+
+  it('continua editando (não cria) se a lista mudar com o formulário aberto', async () => {
+    adminService.listProducts.mockResolvedValue(PAGE);
+    adminService.updateProduct.mockResolvedValue({});
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Vestido Midi');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Vestido Midi' }));
+    // Busca que não traz o produto em edição.
+    adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0, totalElements: 0 });
+    fireEvent.change(screen.getByLabelText('Buscar produto'), { target: { value: 'blusa' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+    await screen.findByText('Nenhum produto encontrado');
+
+    fireEvent.change(screen.getByLabelText('Descrição'), {
+      target: { value: 'Descrição nova do vestido' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }));
+
+    await waitFor(() =>
+      expect(adminService.updateProduct).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ productId: 1, description: 'Descrição nova do vestido' }),
+      ),
+    );
+    expect(adminService.createProduct).not.toHaveBeenCalled();
+  });
+
+  it('trocar de produto em edição carrega os dados do novo produto', async () => {
+    adminService.listProducts.mockResolvedValue({
+      content: [
+        { ...PAGE.content[0], description: 'Descrição do vestido' },
+        {
+          productId: 2,
+          productName: 'Saia Longa',
+          description: 'Descrição da saia',
+          image: 'b.jpg',
+          price: 150,
+          specialPrice: 150,
+          stock: 3,
+        },
+      ],
+      totalPages: 1,
+    });
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Saia Longa');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Vestido Midi' }));
+    expect(screen.getByLabelText('Nome')).toHaveValue('Vestido Midi');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Saia Longa' }));
+    expect(screen.getByLabelText('Nome')).toHaveValue('Saia Longa');
+    expect(screen.getByLabelText('Descrição')).toHaveValue('Descrição da saia');
+  });
 });
