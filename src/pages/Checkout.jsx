@@ -44,7 +44,11 @@ export default function Checkout() {
     dispatch(fetchAddresses());
   }, [dispatch]);
 
-  const selectedAddress = addresses.find((a) => a.addressId === addressId);
+  // Com um único endereço cadastrado, ele já vem escolhido — antes o
+  // "Continuar" ficava desativado sem explicação até a cliente clicar nele.
+  const effectiveAddressId =
+    addressId ?? (addresses.length === 1 ? addresses[0].addressId : null);
+  const selectedAddress = addresses.find((a) => a.addressId === effectiveAddressId);
   const uf = selectedAddress?.state || null;
   const cep = selectedAddress?.pincode || null;
 
@@ -121,7 +125,7 @@ export default function Checkout() {
 
   const shippingReady = shipping.status === 'ready' && selectedShippingOption != null;
   const canContinue =
-    (step === 0 && addressId != null) || (step === 1 && shippingReady) || step === 2;
+    (step === 0 && effectiveAddressId != null) || (step === 1 && shippingReady) || step === 2;
 
   const handleConfirm = async () => {
     setPlacing(true);
@@ -129,7 +133,7 @@ export default function Checkout() {
     setShortage(null);
     try {
       const { order, initPoint, paymentInitFailed } = await createOrder({
-        addressId,
+        addressId: effectiveAddressId,
         couponCode: coupon?.code,
         shippingServiceId: effectiveShippingServiceId,
       });
@@ -167,7 +171,11 @@ export default function Checkout() {
 
       <div className="mt-8">
         {step === 0 && (
-          <AddressPicker addresses={addresses} value={addressId} onChange={setAddressId} />
+          <AddressPicker
+            addresses={addresses}
+            value={effectiveAddressId}
+            onChange={setAddressId}
+          />
         )}
         {step === 1 && (
           <ShippingStep
@@ -233,7 +241,7 @@ export default function Checkout() {
           <Button
             onClick={handleConfirm}
             loading={placing}
-            disabled={addressId == null || !shippingReady}
+            disabled={effectiveAddressId == null || !shippingReady}
           >
             Ir para o pagamento
           </Button>

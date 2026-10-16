@@ -108,7 +108,7 @@ describe('Produto (PDP)', () => {
     await waitFor(() => expect(store.getState().cart.drawerOpen).toBe(true));
   });
 
-  it('logado: variante ja no carrinho (400) apenas abre o CartDrawer', async () => {
+  it('logado: variante ja no carrinho (400) avisa e abre o CartDrawer', async () => {
     getProduct.mockResolvedValue(product);
     getProductVariants.mockResolvedValue([
       { variantId: 55, size: 'Único', stock: 5, inStock: true },
@@ -122,7 +122,9 @@ describe('Produto (PDP)', () => {
     (await screen.findByRole('button', { name: 'Adicionar ao carrinho' })).click();
 
     await waitFor(() => expect(store.getState().cart.drawerOpen).toBe(true));
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Esse tamanho já está no seu carrinho',
+    );
   });
 
   it('logado: estoque insuficiente (400) mostra a mensagem do backend', async () => {

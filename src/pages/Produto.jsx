@@ -91,7 +91,12 @@ export default function Produto() {
       if (payload?.code === 'unauthorized') {
         goToLogin();
       } else if (payload?.code === 'already_in_cart') {
-        // Ja esta no carrinho: abre o drawer para o usuario ajustar a quantidade.
+        // Ja esta no carrinho: avisa (antes so abria o drawer, sem explicar por
+        // que a quantidade escolhida nao entrou) e abre para ajustar la.
+        setFeedback({
+          tone: 'info',
+          message: 'Esse tamanho já está no seu carrinho. Ajuste a quantidade por lá.',
+        });
         dispatch(openDrawer());
       } else {
         setFeedback({

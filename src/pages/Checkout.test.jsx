@@ -100,6 +100,21 @@ describe('Checkout', () => {
     expect(screen.getByText('Pagina do carrinho')).toBeInTheDocument();
   });
 
+  it('com um unico endereco, ele ja vem escolhido e o Continuar fica ativo', async () => {
+    renderCheckout();
+    expect(await screen.findByRole('radio', { name: /Rua das Flores/ })).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Continuar' })).toBeEnabled();
+  });
+
+  it('com mais de um endereco, pede para escolher', async () => {
+    renderCheckout({ addresses: [ADDRESS, { ...ADDRESS, addressId: 2, street: 'Rua Nova' }] });
+    await screen.findByRole('radio', { name: /Rua Nova/ });
+    expect(screen.getByRole('button', { name: 'Continuar' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('radio', { name: /Rua Nova/ }));
+    expect(screen.getByRole('button', { name: 'Continuar' })).toBeEnabled();
+  });
+
   it('cota o frete pelo CEP/UF do endereco e soma produtos + frete na revisao', async () => {
     renderCheckout();
     await goThroughSteps();
