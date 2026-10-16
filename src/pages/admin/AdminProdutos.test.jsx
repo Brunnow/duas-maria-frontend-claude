@@ -247,6 +247,33 @@ describe('AdminProdutos', () => {
     );
   });
 
+  it('cria um jeans com numeracao', async () => {
+    adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
+    adminService.createProduct.mockResolvedValue({ productId: 43 });
+    adminService.createVariants.mockResolvedValue([]);
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Nenhum produto');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo produto' }));
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Calça Jeans Reta' } });
+    fireEvent.change(screen.getByLabelText('Descrição'), { target: { value: 'Jeans de cintura alta' } });
+    fireEvent.change(screen.getByLabelText('Preço (R$)'), { target: { value: '189,90' } });
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: '7' } });
+    fireEvent.click(screen.getByLabelText('Tamanho 40'));
+    fireEvent.click(screen.getByLabelText('Tamanho 38'));
+    fireEvent.change(screen.getByLabelText('Estoque inicial 38'), { target: { value: '2' } });
+    expect(screen.getByLabelText('Tamanho Único')).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Criar produto' }));
+
+    await waitFor(() =>
+      expect(adminService.createVariants).toHaveBeenCalledWith(43, [
+        { size: '38', initialStock: 2 },
+        { size: '40', initialStock: 0 },
+      ]),
+    );
+  });
+
   it('desabilita "Único" quando ha tamanhos numerados marcados', async () => {
     adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
     renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });

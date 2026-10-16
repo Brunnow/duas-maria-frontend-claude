@@ -5,7 +5,7 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Skeleton from '@/components/ui/Skeleton';
 import StockMovementModal from '@/components/admin/StockMovementModal';
-import { VARIANT_SIZES, sizeRank } from '@/lib/variants';
+import { SIZE_GROUPS, UNICO, VARIANT_SIZES, sizeRank } from '@/lib/variants';
 import * as adminService from '@/services/adminService';
 
 const LOW_STOCK = 3; // mesmo threshold padrão do backend em /admin/stock/low
@@ -75,10 +75,9 @@ export default function ProductVariantsManager({ productId, onClose }) {
 
   const list = variants || [];
   const usedSizes = new Set(list.map((v) => v.size));
-  const hasUnico = usedSizes.has('Único');
-  const availableSizes = hasUnico
-    ? []
-    : VARIANT_SIZES.filter((s) => !usedSizes.has(s) && (s !== 'Único' || list.length === 0));
+  const hasUnico = usedSizes.has(UNICO);
+  const isAvailable = (s) => !usedSizes.has(s) && (s !== UNICO || list.length === 0);
+  const availableSizes = hasUnico ? [] : VARIANT_SIZES.filter(isAvailable);
 
   const handleAdd = (event) => {
     event.preventDefault();
@@ -237,11 +236,19 @@ export default function ProductVariantsManager({ productId, onClose }) {
                 onChange={(e) => setNewSize(e.target.value)}
               >
                 <option value="">…</option>
-                {availableSizes.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
+                {SIZE_GROUPS.map((group) => {
+                  const sizes = group.sizes.filter((s) => availableSizes.includes(s));
+                  if (sizes.length === 0) return null;
+                  return (
+                    <optgroup key={group.label} label={group.label}>
+                      {sizes.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
               </Select>
             </div>
             <div className="w-28">

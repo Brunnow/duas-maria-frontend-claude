@@ -39,6 +39,30 @@ describe('ProductVariantsManager', () => {
     ]);
   });
 
+  it('numeracao de jeans aparece em ordem crescente e pode ser adicionada', async () => {
+    adminService.getVariants.mockResolvedValue([variant(2, '40', 3), variant(1, '36', 5)]);
+    adminService.createVariants.mockResolvedValue([]);
+    render(<ProductVariantsManager productId={7} />);
+
+    const rows = await screen.findAllByText(/^Tamanho \d+/);
+    expect(rows.map((r) => r.textContent.match(/^Tamanho \d+/)[0])).toEqual([
+      'Tamanho 36',
+      'Tamanho 40',
+    ]);
+    const select = screen.getByLabelText('Adicionar tamanho');
+    expect(select.querySelector('optgroup[label="Numeração"] option[value="38"]')).not.toBeNull();
+    expect(select.querySelector('option[value="36"]')).toBeNull(); // já cadastrado
+    expect(select.querySelector('option[value="Único"]')).toBeNull(); // já tem grade
+
+    fireEvent.change(select, { target: { value: '38' } });
+    fireEvent.change(screen.getByLabelText('Estoque inicial'), { target: { value: '4' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
+
+    await waitFor(() =>
+      expect(adminService.createVariants).toHaveBeenCalledWith(7, [{ size: '38', initialStock: 4 }]),
+    );
+  });
+
   it('estado vazio quando nao ha grade', async () => {
     adminService.getVariants.mockResolvedValue([]);
     render(<ProductVariantsManager productId={7} />);
