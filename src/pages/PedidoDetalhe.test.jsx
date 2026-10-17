@@ -127,4 +127,29 @@ describe('PedidoDetalhe', () => {
     expect(await screen.findByText('Entregue', { selector: 'span' })).toBeInTheDocument();
     expect(screen.getByText(/Entregue em 15\/02\/2026/)).toBeInTheDocument();
   });
+
+  it('pedido entregue mostra trocas/devolucoes registradas e o link da politica', async () => {
+    fetchOrderById.mockResolvedValue({
+      ...order,
+      orderStatus: 'ENTREGUE',
+      returns: [
+        {
+          id: 1,
+          type: 'TROCA',
+          refundAmount: 0,
+          refundStatus: 'NONE',
+          createdAt: '2026-02-16T10:00:00',
+          items: [{ orderItemId: 1, productName: 'Vestido', quantity: 1, returnedSize: 'M', newSize: 'G' }],
+        },
+      ],
+    });
+    renderAt(1);
+
+    expect(await screen.findByText('Troca registrada')).toBeInTheDocument();
+    expect(screen.getByText('1x Vestido M → G')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Veja como funciona' })).toHaveAttribute(
+      'href',
+      '/trocas-e-devolucoes',
+    );
+  });
 });

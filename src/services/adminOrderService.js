@@ -89,3 +89,16 @@ export function getShippingLabelPrintUrl(orderId) {
     .get(`/admin/orders/${encodeURIComponent(orderId)}/melhor-envio/print`)
     .then((response) => response.data.url);
 }
+
+/**
+ * Registra troca ou devolução de um pedido entregue (depois que a peça voltou).
+ *   POST /api/admin/orders/{id}/returns
+ *   { type: 'TROCA'|'DEVOLUCAO', defective, conditionChecked, note,
+ *     items: [{ orderItemId, quantity, newVariantId?, returnedVariantId? }] }
+ * Devolve o detalhe atualizado do pedido.
+ */
+export function registerReturn(orderId, payload) {
+  return api
+    .post(`/admin/orders/${encodeURIComponent(orderId)}/returns`, payload)
+    .then((response) => response.data);
+}

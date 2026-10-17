@@ -19,6 +19,8 @@ import {
 import { productImageUrl } from '@/lib/media';
 import { addressLines } from '@/lib/address';
 import OptimizedImage from '@/components/shared/OptimizedImage';
+import { returnItemLine, returnRefundText, returnTitle } from '@/lib/orderReturns';
+import { RETURN_POLICY_PATH } from '@/lib/returnPolicy';
 
 // Mesma resposta (404) para "pedido inexistente" e "pedido de outro
 // usuário" — tratamos as duas como "não encontrado" com uma mensagem
@@ -108,6 +110,41 @@ export default function PedidoDetalhe() {
               );
             })}
           </ul>
+
+          {order.returns?.length > 0 && (
+            <section className="mt-8 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                Trocas e devoluções
+              </p>
+              <ol className="mt-2 space-y-3 text-muted">
+                {order.returns.map((r) => (
+                  <li key={r.id}>
+                    <span className="text-foreground">{returnTitle(r)} registrada</span> em{' '}
+                    {formatDateTime(r.createdAt)}
+                    {r.items.map((i) => (
+                      <span key={i.orderItemId} className="block">
+                        {returnItemLine(i)}
+                      </span>
+                    ))}
+                    {returnRefundText(r) && <span className="block">{returnRefundText(r)}</span>}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {order.orderStatus === 'ENTREGUE' && (
+            <p className="mt-8 text-sm text-muted">
+              Precisa trocar ou devolver?{' '}
+              <Link
+                to={RETURN_POLICY_PATH}
+                className="text-foreground underline underline-offset-4 hover:text-accent"
+              >
+                Veja como funciona
+              </Link>
+              .
+            </p>
+          )}
 
           {addressLines(order.shippingAddress).length > 0 && (
             <section className="mt-8 text-sm">

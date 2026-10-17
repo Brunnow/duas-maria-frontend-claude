@@ -13,6 +13,10 @@ vi.mock('@/services/adminOrderService', () => ({
   updateOrderTracking: vi.fn(),
   purchaseShippingLabel: vi.fn(),
   getShippingLabelPrintUrl: vi.fn(),
+  registerReturn: vi.fn(),
+}));
+vi.mock('@/services/productService', () => ({
+  getProductVariants: vi.fn(),
 }));
 
 import {
@@ -23,7 +27,9 @@ import {
   retryRefund,
   updateOrderStatus,
   updateOrderTracking,
+  registerReturn,
 } from '@/services/adminOrderService';
+import { getProductVariants } from '@/services/productService';
 import AdminPedidoDetalhe from './AdminPedidoDetalhe';
 
 function renderAt(id) {
@@ -526,5 +532,124 @@ describe('AdminPedidoDetalhe', () => {
     await screen.findByRole('heading', { name: 'Pedido #77' });
     expect(screen.getByText('Eventos de webhook')).toBeInTheDocument();
     expect(screen.getByText(/Processado/)).toBeInTheDocument();
+  });
+
+  const eligibility = (overrides = {}) => ({
+    deliveredAt: '2026-02-12T10:00:00',
+    deadline: '2026-02-19T10:00:00',
+    withinWindow: true,
+    freeShippingAvailable: true,
+    refundableAmount: 199.9,
+    refundAvailable: true,
+    items: [
+      {
+        orderItemId: 1,
+        productId: 5,
+        productName: 'Vestido Midi Floral',
+        size: 'M',
+        quantity: 1,
+        returnableQuantity: 1,
+        onSale: false,
+        unitPaid: 185.0,
+        heldVariants: [{ variantId: 10, size: 'M' }],
+      },
+    ],
+    ...overrides,
+  });
+
+  it('pedido entregue: registra troca de tamanho com o novo tamanho escolhido', async () => {
+    getOrder.mockResolvedValue(
+      detail({ order: { orderStatus: 'ENTREGUE' }, returnEligibility: eligibility() }),
+    );
+    getProductVariants.mockResolvedValue([
+      { variantId: 10, size: 'M', stock: 3, inStock: true },
+      { variantId: 11, size: 'G', stock: 2, inStock: true },
+      { variantId: 12, size: 'GG', stock: 0, inStock: false },
+    ]);
+    registerReturn.mockResolvedValue(detail());
+    renderAt(77);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Registrar troca/devolução' }));
+    expect(screen.getByText(/Frete da volta por conta da loja/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Vestido Midi Floral/ }));
+
+    const newSize = await screen.findByLabelText('Novo tamanho');
+    await waitFor(() => expect(screen.getByRole('option', { name: 'G (2 em estoque)' })).toBeInTheDocument());
+    // o tamanho que voltou e os esgotados não aparecem
+    expect(screen.queryByRole('option', { name: /^M / })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /^GG/ })).not.toBeInTheDocument();
+    fireEvent.change(newSize, { target: { value: '11' } });
+
+    const submit = screen.getByRole('button', { name: 'Registrar troca' });
+    expect(submit).toBeDisabled(); // falta conferir etiqueta/uso
+    fireEvent.click(screen.getByRole('checkbox', { name: /etiqueta e sem marcas de uso/ }));
+    fireEvent.click(submit);
+
+    await waitFor(() =>
+      expect(registerReturn).toHaveBeenCalledWith(77, {
+        type: 'TROCA',
+        defective: false,
+        conditionChecked: true,
+        note: undefined,
+        items: [{ orderItemId: 1, quantity: 1, newVariantId: 11, returnedVariantId: undefined }],
+      }),
+    );
+    expect(await screen.findByText(/Estoque atualizado/)).toBeInTheDocument();
+  });
+
+  it('peca em promocao nao pode ser trocada, mas pode ser devolvida', async () => {
+    const e = eligibility();
+    e.items[0].onSale = true;
+    getOrder.mockResolvedValue(detail({ order: { orderStatus: 'ENTREGUE' }, returnEligibility: e }));
+    getProductVariants.mockResolvedValue([]);
+    renderAt(77);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Registrar troca/devolução' }));
+    expect(screen.getByText('Promoção: sem troca')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Vestido Midi Floral/ })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('radio', { name: /Devolver o dinheiro/ }));
+    expect(screen.getByRole('checkbox', { name: /Vestido Midi Floral/ })).toBeEnabled();
+  });
+
+  it('fora do prazo so libera com defeito', async () => {
+    getOrder.mockResolvedValue(
+      detail({ order: { orderStatus: 'ENTREGUE' }, returnEligibility: eligibility({ withinWindow: false }) }),
+    );
+    getProductVariants.mockResolvedValue([]);
+    renderAt(77);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Registrar troca/devolução' }));
+    expect(screen.getByText(/Fora do prazo de 7 dias.*Só peça com defeito/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Peça com defeito/ }));
+    expect(screen.getByText(/Liberado por defeito/)).toBeInTheDocument();
+  });
+
+  it('mostra as trocas e devolucoes ja registradas', async () => {
+    getOrder.mockResolvedValue(
+      detail({
+        order: {
+          orderStatus: 'ENTREGUE',
+          returns: [
+            {
+              id: 1,
+              type: 'DEVOLUCAO',
+              defective: false,
+              freeShipping: true,
+              refundAmount: 90,
+              refundStatus: 'REFUNDED',
+              createdAt: '2026-02-15T10:00:00',
+              createdBy: 'admin',
+              items: [{ orderItemId: 1, productName: 'Blusa', quantity: 1, returnedSize: 'P', newSize: null }],
+            },
+          ],
+        },
+      }),
+    );
+    renderAt(77);
+
+    expect(await screen.findByText('1x Blusa P')).toBeInTheDocument();
+    expect(screen.getByText(/Estorno de R\$\s*90,00/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Registrar troca/devolução' })).not.toBeInTheDocument();
   });
 });

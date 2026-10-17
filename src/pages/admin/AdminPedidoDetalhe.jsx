@@ -16,7 +16,7 @@ import {
   updateOrderStatus,
   updateOrderTracking,
 } from '@/services/adminOrderService';
-import { formatCurrency, formatDateTime } from '@/lib/format';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { orderStatusLabel, orderStatusTone } from '@/lib/orderStatus';
 import { paymentStatusLabel, paymentStatusTone } from '@/lib/paymentStatus';
 import {
@@ -30,6 +30,8 @@ import {
 import { productImageUrl } from '@/lib/media';
 import { addressLines } from '@/lib/address';
 import OptimizedImage from '@/components/shared/OptimizedImage';
+import OrderReturnModal from '@/components/admin/OrderReturnModal';
+import { returnItemLine, returnRefundText, returnTitle } from '@/lib/orderReturns';
 
 const WEBHOOK_EVENT_STATUS_LABEL = {
   RECEIVED: 'Recebido',
@@ -85,6 +87,9 @@ export default function AdminPedidoDetalhe() {
   const [printingLabel, setPrintingLabel] = useState(false);
   const [labelActionError, setLabelActionError] = useState(null);
 
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [returnOk, setReturnOk] = useState(null);
+
   // A rota (/admin/pedidos/:id) não remonta o componente ao trocar só o id
   // (React Router mantém a mesma instância) — sem isso, o estado de edição
   // de um pedido (rastreio, nota, erro) vazava pro próximo pedido aberto.
@@ -103,6 +108,8 @@ export default function AdminPedidoDetalhe() {
     setTrackingError(null);
     setEditingTracking(false);
     setLabelActionError(null);
+    setReturnOpen(false);
+    setReturnOk(null);
   }
 
   const submitRetryRefund = async () => {
@@ -208,6 +215,8 @@ export default function AdminPedidoDetalhe() {
   const history = detail?.statusHistory || [];
   const payment = order?.payment;
   const webhookEvents = detail?.webhookEvents || [];
+  const returns = order?.returns || [];
+  const eligibility = detail?.returnEligibility;
 
   return (
     <div>
@@ -393,6 +402,75 @@ export default function AdminPedidoDetalhe() {
                       </div>
                     )}
                   </div>
+                </section>
+              )}
+
+              {(eligibility || returns.length > 0) && (
+                <section className="text-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                    Trocas e devoluções
+                  </p>
+                  {returns.length > 0 && (
+                    <ol className="mt-2 space-y-2 text-xs text-muted">
+                      {returns.map((r) => (
+                        <li key={r.id}>
+                          <span className="text-foreground">{returnTitle(r)}</span> ·{' '}
+                          {formatDateTime(r.createdAt)}
+                          {r.createdBy && <> · {r.createdBy}</>}
+                          {r.items.map((i) => (
+                            <span key={i.orderItemId} className="block">
+                              {returnItemLine(i)}
+                            </span>
+                          ))}
+                          {returnRefundText(r) && <span className="block">{returnRefundText(r)}</span>}
+                          <span className="block">
+                            {r.defective && 'Defeito · '}
+                            Frete da volta: {r.freeShipping ? 'loja' : 'cliente'}
+                          </span>
+                          {r.note && <span className="block italic">{r.note}</span>}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                  {eligibility && (
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      <p className="text-xs text-muted">
+                        {eligibility.deadline
+                          ? eligibility.withinWindow
+                            ? `Prazo até ${formatDate(eligibility.deadline)}.`
+                            : `Prazo terminou em ${formatDate(eligibility.deadline)} (só defeito).`
+                          : 'Sem data de entrega registrada.'}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="w-fit"
+                        onClick={() => {
+                          setReturnOk(null);
+                          setReturnOpen(true);
+                        }}
+                      >
+                        Registrar troca/devolução
+                      </Button>
+                      {returnOk && (
+                        <p role="status" className="text-xs text-success">
+                          {returnOk}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {returnOpen && eligibility && (
+                    <OrderReturnModal
+                      orderId={order.orderId}
+                      eligibility={eligibility}
+                      onClose={() => setReturnOpen(false)}
+                      onDone={() => {
+                        setReturnOpen(false);
+                        setReturnOk('Registrado. Estoque atualizado e a cliente foi avisada por e-mail.');
+                        refetch();
+                      }}
+                    />
+                  )}
                 </section>
               )}
 
