@@ -15,6 +15,7 @@ import Conta from '@/pages/Conta';
 import Pedidos from '@/pages/Pedidos';
 import PedidoDetalhe from '@/pages/PedidoDetalhe';
 import NotFound from '@/pages/NotFound';
+import TrocasDevolucoes from '@/pages/TrocasDevolucoes';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminHome from '@/pages/admin/AdminHome';
 import AdminProdutos from '@/pages/admin/AdminProdutos';
@@ -60,6 +61,7 @@ function App() {
           <Route path="/produtos/:id" element={<Produto />} />
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/trocas-e-devolucoes" element={<TrocasDevolucoes />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/carrinho" element={<Carrinho />} />
             <Route path="/checkout" element={<Checkout />} />

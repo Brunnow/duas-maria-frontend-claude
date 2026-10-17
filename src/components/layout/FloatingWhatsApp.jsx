@@ -1,6 +1,5 @@
 import { FaWhatsapp } from 'react-icons/fa';
-
-const WHATSAPP_URL = 'https://wa.me/5561995730440';
+import { STORE_WHATSAPP_URL as WHATSAPP_URL } from '@/lib/contact';
 
 /** Botao flutuante de contato via WhatsApp, visivel em todas as paginas. */
 export default function FloatingWhatsApp() {

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import Container from '@/components/ui/Container';
-
-const WHATSAPP_URL = 'https://wa.me/5561995730440';
+import { STORE_WHATSAPP_URL as WHATSAPP_URL } from '@/lib/contact';
+import { RETURN_POLICY_PATH } from '@/lib/returnPolicy';
 
 const groups = [
   {
@@ -14,7 +14,7 @@ const groups = [
   {
     title: 'Ajuda',
     links: [
-      { label: 'Trocas e devoluções', href: WHATSAPP_URL },
+      { label: 'Trocas e devoluções', to: RETURN_POLICY_PATH },
       { label: 'Envio e prazos', href: WHATSAPP_URL },
       { label: 'Fale conosco', href: WHATSAPP_URL },
     ],

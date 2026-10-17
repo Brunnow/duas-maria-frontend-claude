@@ -14,6 +14,7 @@ import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import { addToCart, openDrawer } from '@/features/cart/cartSlice';
 import { useProduct } from '@/hooks/useProduct';
 import { cn } from '@/lib/cn';
+import { RETURN_POLICY_PATH, RETURN_WINDOW_DAYS, isOnSale } from '@/lib/returnPolicy';
 
 const LOW_STOCK = 5;
 
@@ -256,6 +257,18 @@ export default function Produto() {
                   {feedback.message}
                 </p>
               )}
+
+              <p className="text-xs text-muted">
+                {isOnSale(product.price, product.specialPrice)
+                  ? `Peça em promoção: não tem troca. Arrependimento em até ${RETURN_WINDOW_DAYS} dias garantido.`
+                  : `Primeira troca grátis em até ${RETURN_WINDOW_DAYS} dias.`}{' '}
+                <Link
+                  to={RETURN_POLICY_PATH}
+                  className="text-foreground underline underline-offset-4 hover:text-accent"
+                >
+                  Trocas e devoluções
+                </Link>
+              </p>
 
               {product.description && (
                 <div className="mt-2 border-t border-border pt-5">

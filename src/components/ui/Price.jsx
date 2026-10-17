@@ -1,13 +1,13 @@
 import { cn } from '@/lib/cn';
 import { discountPercent, formatCurrency } from '@/lib/format';
+import { isOnSale } from '@/lib/returnPolicy';
 
 /**
  * Exibe o preco de um produto em BRL, tratando preco promocional e,
  * opcionalmente, o percentual de desconto.
  */
 export default function Price({ price, specialPrice, showDiscount = false, className }) {
-  const hasSpecial =
-    specialPrice != null && Number(specialPrice) > 0 && Number(specialPrice) < Number(price);
+  const hasSpecial = isOnSale(price, specialPrice);
   const pct = hasSpecial ? discountPercent(price, specialPrice) : null;
 
   return (

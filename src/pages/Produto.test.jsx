@@ -83,6 +83,27 @@ describe('Produto (PDP)', () => {
     expect(screen.getByRole('button', { name: /selecione um tamanho/i })).toBeDisabled();
   });
 
+  it('mostra o aviso de troca: peca normal tem troca, peca em promocao nao', async () => {
+    getProduct.mockResolvedValue(product);
+    getProductVariants.mockResolvedValue([{ variantId: 1, size: 'P', stock: 2, inStock: true }]);
+    renderAt(7);
+
+    expect(await screen.findByText(/Primeira troca grátis em até 7 dias/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Trocas e devoluções' })).toHaveAttribute(
+      'href',
+      '/trocas-e-devolucoes',
+    );
+  });
+
+  it('peca em promocao avisa que nao tem troca', async () => {
+    getProduct.mockResolvedValue({ ...product, specialPrice: 299.9 });
+    getProductVariants.mockResolvedValue([{ variantId: 1, size: 'P', stock: 2, inStock: true }]);
+    renderAt(7);
+
+    expect(await screen.findByText(/Peça em promoção: não tem troca/)).toBeInTheDocument();
+    expect(screen.queryByText(/Primeira troca grátis/)).not.toBeInTheDocument();
+  });
+
   it('mostra "produto nao encontrado" no 404', async () => {
     getProduct.mockRejectedValue({ response: { status: 404, data: { message: 'x' } } });
     getProductVariants.mockRejectedValue({ response: { status: 404 } });
