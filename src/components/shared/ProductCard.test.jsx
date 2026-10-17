@@ -23,7 +23,7 @@ const renderCard = (props) =>
 describe('ProductCard', () => {
   it('mostra nome e preco e linka para a pagina do produto', () => {
     renderCard();
-    expect(norm(screen.getByText(/R\$/).textContent)).toBe('R$ 299,90');
+    expect(norm(screen.getByText(/^R\$/).textContent)).toBe('R$ 299,90');
     expect(screen.getByRole('link', { name: 'Ver Vestido Midi Linho' })).toHaveAttribute(
       'href',
       '/produtos/1',
@@ -42,5 +42,15 @@ describe('ProductCard', () => {
   it('exibe o percentual de desconto quando ha preco promocional', () => {
     renderCard({ price: 400, specialPrice: 300 });
     expect(screen.getByText('-25%')).toBeInTheDocument();
+  });
+
+  it('mostra o parcelamento em 6x sem juros sobre o preco cheio', () => {
+    renderCard({ price: 300 });
+    expect(norm(screen.getByText(/sem juros/).textContent)).toBe('ou 6x de R$ 50,00 sem juros');
+  });
+
+  it('calcula o parcelamento sobre o preco promocional', () => {
+    renderCard({ price: 400, specialPrice: 299.9 });
+    expect(norm(screen.getByText(/sem juros/).textContent)).toBe('ou 6x de R$ 49,98 sem juros');
   });
 });

@@ -4,7 +4,9 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Price from '@/components/ui/Price';
 import { truncateText } from '@/components/utils/truncateText';
-import { discountPercent } from '@/lib/format';
+import { discountPercent, formatCurrency } from '@/lib/format';
+import { INTEREST_FREE_INSTALLMENTS, installmentValue } from '@/lib/installments';
+import { isOnSale } from '@/lib/returnPolicy';
 import OptimizedImage from '@/components/shared/OptimizedImage';
 
 /**
@@ -23,6 +25,7 @@ export default function ProductCard({
   const inStock = Number(quantity) > 0;
   const pct = discountPercent(price, specialPrice);
   const href = `/produtos/${productId}`;
+  const installment = installmentValue(isOnSale(price, specialPrice) ? specialPrice : price);
 
   return (
     <div className="group flex flex-col">
@@ -65,7 +68,14 @@ export default function ProductCard({
           </Link>
         </h3>
 
-        <Price price={price} specialPrice={specialPrice} className="text-sm" />
+        <div>
+          <Price price={price} specialPrice={specialPrice} className="text-sm" />
+          {installment != null && (
+            <p className="mt-0.5 text-xs text-muted">
+              ou {INTEREST_FREE_INSTALLMENTS}x de {formatCurrency(installment)} sem juros
+            </p>
+          )}
+        </div>
 
         <div className="mt-auto pt-2">
           <Button as={Link} to={href} variant="secondary" size="sm" className="w-full">

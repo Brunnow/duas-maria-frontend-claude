@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { FiArrowRight } from 'react-icons/fi';
 import Container from '@/components/ui/Container';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
@@ -11,6 +13,9 @@ import Hero from './Hero';
 import HighlightsStrip from './HighlightsStrip';
 
 const FEATURED_COUNT = 8;
+// Mais novos primeiro: o id cresce a cada produto cadastrado, e o padrão da
+// API (id crescente) mostraria justamente as peças mais antigas.
+const FEATURED_QUERY = `pageSize=${FEATURED_COUNT}&sortBy=productId&sortOrder=desc`;
 
 export default function Home() {
   const dispatch = useDispatch();
@@ -18,7 +23,7 @@ export default function Home() {
   const { isLoading, errorMessage } = useSelector((state) => state.errors);
 
   useEffect(() => {
-    dispatch(fetchProducts());
+    dispatch(fetchProducts(FEATURED_QUERY));
   }, [dispatch]);
 
   const featured = Array.isArray(products) ? products.slice(0, FEATURED_COUNT) : [];
@@ -48,7 +53,22 @@ export default function Home() {
               description="Volte em breve para ver as novidades."
             />
           ) : (
-            <ProductGrid products={featured} />
+            <>
+              <ProductGrid products={featured} />
+              <div className="mt-10 flex justify-center">
+                <Link
+                  to="/produtos"
+                  className="group inline-flex items-center gap-1.5 text-sm text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline"
+                >
+                  Ver todos os produtos
+                  <FiArrowRight
+                    size={14}
+                    aria-hidden="true"
+                    className="transition-transform group-hover:translate-x-0.5"
+                  />
+                </Link>
+              </div>
+            </>
           )}
         </div>
       </Container>
