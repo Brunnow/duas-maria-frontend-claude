@@ -206,8 +206,9 @@ export default function Produto() {
 
               {selectedVariant?.inStock && selectedVariant.stock <= LOW_STOCK && (
                 <p className="text-sm text-warning">
-                  Últimas {selectedVariant.stock}{' '}
-                  {selectedVariant.stock === 1 ? 'unidade' : 'unidades'}.
+                  {selectedVariant.stock === 1
+                    ? 'Última unidade.'
+                    : `Últimas ${selectedVariant.stock} unidades.`}
                 </p>
               )}
 
