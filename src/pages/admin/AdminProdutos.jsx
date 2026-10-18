@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { FiEdit2, FiImage, FiSearch, FiTag, FiTrash2 } from 'react-icons/fi';
 import Button from '@/components/ui/Button';
@@ -67,6 +67,23 @@ export default function AdminProdutos() {
     dispatch(fetchCategories());
   }, [dispatch]);
 
+  // Os painéis (formulário, imagens, tamanhos) abrem no topo da página, mas o
+  // clique vem da lista lá embaixo (ou do botão de salvar no fim do formulário):
+  // leva a tela até o painel que acabou de abrir.
+  const formRef = useRef(null);
+  const imagesRef = useRef(null);
+  const variantsRef = useRef(null);
+  const scrollTo = (ref) => ref.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  useEffect(() => {
+    if (editing !== null) scrollTo(formRef);
+  }, [editing]);
+  useEffect(() => {
+    if (managingImages !== null) scrollTo(imagesRef);
+  }, [managingImages]);
+  useEffect(() => {
+    if (managingVariants !== null) scrollTo(variantsRef);
+  }, [managingVariants]);
+
   const editingProduct = editing && editing !== 'new' ? editing : null;
 
   const applySearch = (event) => {
@@ -92,10 +109,12 @@ export default function AdminProdutos() {
         refetch();
       } else {
         const created = await adminService.createProduct(categoryId, product);
+        // Próximo passo natural: as fotos. Abre o painel de imagens do produto novo.
+        setManagingImages(created.productId);
         if (variants && variants.length > 0) {
           try {
             await adminService.createVariants(created.productId, variants);
-            setNotice('Produto e tamanhos criados.');
+            setNotice('Produto e tamanhos criados. Agora adicione as fotos abaixo.');
           } catch (gridErr) {
             // Produto já existe; a grade falhou. Estado recuperável: abre o
             // painel de tamanhos do produto novo para o admin concluir.
@@ -106,7 +125,9 @@ export default function AdminProdutos() {
             setManagingVariants(created.productId);
           }
         } else {
-          setNotice('Produto criado. Defina os tamanhos em “Tamanhos e estoque” para vendê-lo.');
+          setNotice(
+            'Produto criado. Adicione as fotos abaixo e defina os tamanhos em “Tamanhos e estoque” para vendê-lo.',
+          );
         }
         setEditing(null);
         refetch();
@@ -163,7 +184,7 @@ export default function AdminProdutos() {
       )}
 
       {editing !== null && (
-        <div className="mt-5 rounded-card border border-border p-5">
+        <div ref={formRef} className="mt-5 scroll-mt-4 rounded-card border border-border p-5">
           <ProductForm
             // Remonta ao trocar de produto: o formulário guarda os valores no
             // próprio estado e, sem isto, editar B com A aberto salvava os
@@ -183,13 +204,13 @@ export default function AdminProdutos() {
       )}
 
       {managingImages !== null && (
-        <div className="mt-5">
+        <div ref={imagesRef} className="mt-5 scroll-mt-4">
           <ProductImagesManager productId={managingImages} onClose={closeImages} />
         </div>
       )}
 
       {managingVariants !== null && (
-        <div className="mt-5">
+        <div ref={variantsRef} className="mt-5 scroll-mt-4">
           <ProductVariantsManager
             key={managingVariants}
             productId={managingVariants}

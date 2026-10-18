@@ -12,6 +12,7 @@ vi.mock('@/services/adminService', () => ({
   updateProduct: vi.fn(),
   deleteProduct: vi.fn(),
   uploadProductImage: vi.fn(),
+  listProductImages: vi.fn().mockResolvedValue([]),
   getVariants: vi.fn().mockResolvedValue([]),
   createVariants: vi.fn(),
   deleteVariant: vi.fn(),
@@ -113,6 +114,29 @@ describe('AdminProdutos', () => {
     );
     // Nenhum tamanho marcado -> não cria grade.
     expect(adminService.createVariants).not.toHaveBeenCalled();
+  });
+
+  it('depois de criar, abre o painel de fotos do produto novo e leva a tela ate ele', async () => {
+    const scrollIntoView = vi.fn();
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
+    adminService.createProduct.mockResolvedValue({ productId: 9 });
+
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Nenhum produto');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo produto' }));
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Saia Longa Jeans' } });
+    fireEvent.change(screen.getByLabelText('Descrição'), { target: { value: 'Saia longa' } });
+    fireEvent.change(screen.getByLabelText('Preço (R$)'), { target: { value: '199.9' } });
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: '7' } });
+    scrollIntoView.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Criar produto' }));
+
+    expect(await screen.findByRole('heading', { name: 'Imagens do produto' })).toBeInTheDocument();
+    await waitFor(() => expect(adminService.listProductImages).toHaveBeenCalledWith(9));
+    expect(scrollIntoView).toHaveBeenCalled();
+    expect(screen.getByText(/Adicione as fotos abaixo/)).toBeInTheDocument();
   });
 
   it('aceita preço com vírgula (teclado pt-BR do celular)', async () => {
@@ -256,7 +280,9 @@ describe('AdminProdutos', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Novo produto' }));
     fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Calça Jeans Reta' } });
-    fireEvent.change(screen.getByLabelText('Descrição'), { target: { value: 'Jeans de cintura alta' } });
+    fireEvent.change(screen.getByLabelText('Descrição'), {
+      target: { value: 'Jeans de cintura alta' },
+    });
     fireEvent.change(screen.getByLabelText('Preço (R$)'), { target: { value: '189,90' } });
     fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: '7' } });
     fireEvent.click(screen.getByLabelText('Tamanho 40'));
@@ -297,7 +323,10 @@ describe('AdminProdutos', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
 
     await waitFor(() =>
-      expect(adminService.listProducts).toHaveBeenLastCalledWith({ pageNumber: 0, keyword: 'saia' }),
+      expect(adminService.listProducts).toHaveBeenLastCalledWith({
+        pageNumber: 0,
+        keyword: 'saia',
+      }),
     );
     expect(await screen.findByText('Nenhum produto encontrado')).toBeInTheDocument();
 
