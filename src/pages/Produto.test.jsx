@@ -83,6 +83,20 @@ describe('Produto (PDP)', () => {
     expect(screen.getByRole('button', { name: /selecione um tamanho/i })).toBeDisabled();
   });
 
+  it('publica os dados do produto para o Google sem inventar marca', async () => {
+    getProduct.mockResolvedValue(product);
+    getProductVariants.mockResolvedValue([{ variantId: 1, size: 'P', stock: 0, inStock: false }]);
+    renderAt(7);
+
+    await screen.findByRole('heading', { name: 'Blazer Alfaiataria' });
+    const data = JSON.parse(document.getElementById('seo-jsonld').textContent);
+    expect(document.title).toBe('Blazer Alfaiataria | Duas Maria');
+    expect(data.brand).toBeUndefined();
+    expect(data.offers.seller.name).toBe('Duas Maria');
+    expect(data.offers.availability).toBe('https://schema.org/OutOfStock');
+    expect(data.offers.hasMerchantReturnPolicy.merchantReturnDays).toBe(7);
+  });
+
   it('mostra o aviso de troca: peca normal tem troca, peca em promocao nao', async () => {
     getProduct.mockResolvedValue(product);
     getProductVariants.mockResolvedValue([{ variantId: 1, size: 'P', stock: 2, inStock: true }]);

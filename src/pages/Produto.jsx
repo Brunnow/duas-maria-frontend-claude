@@ -323,7 +323,8 @@ function ProductSeo({ product, inStock }) {
         description,
         image: product.image ? [product.image] : undefined,
         sku: String(product.productId),
-        brand: { '@type': 'Brand', name: 'Duas Maria' },
+        // Sem "brand": a loja revende outras marcas (ex.: FARM) e o produto não
+        // tem campo de marca. A Duas Maria entra como vendedora da oferta.
         offers: {
           '@type': 'Offer',
           url,
@@ -331,6 +332,14 @@ function ProductSeo({ product, inStock }) {
           price: Number.isFinite(price) ? price.toFixed(2) : undefined,
           availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
           itemCondition: 'https://schema.org/NewCondition',
+          seller: { '@type': 'Organization', name: 'Duas Maria' },
+          hasMerchantReturnPolicy: {
+            '@type': 'MerchantReturnPolicy',
+            applicableCountry: 'BR',
+            returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+            merchantReturnDays: RETURN_WINDOW_DAYS,
+            returnMethod: 'https://schema.org/ReturnByMail',
+          },
         },
       }}
     />
