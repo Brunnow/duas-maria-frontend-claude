@@ -55,7 +55,7 @@ export function useCatalog() {
   const setPage = useCallback((page) => update({ page }), [update]);
   const clear = useCallback(() => setSearchParams(new URLSearchParams()), [setSearchParams]);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const query = new URLSearchParams();
     query.set('pageNumber', String(filters.page - 1));
     query.set('sortBy', 'price');
@@ -66,7 +66,11 @@ export function useCatalog() {
     dispatch(fetchProducts(query.toString()));
   }, [dispatch, filters.page, filters.category, filters.sort, filters.keyword]);
 
-  return { filters, setCategory, setSort, setKeyword, setPage, clear };
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return { filters, setCategory, setSort, setKeyword, setPage, clear, reload: load };
 }
 
 export default useCatalog;

@@ -1,12 +1,14 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { FiArrowRight } from 'react-icons/fi';
+import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import ProductGrid from '@/components/shared/ProductGrid';
 import ProductGridSkeleton from '@/components/shared/ProductGridSkeleton';
+import { useRetryWhenVisible } from '@/hooks/useRetryWhenVisible';
 import { fetchProducts } from '@/store/actions';
 import CategoryShowcase from './CategoryShowcase';
 import Hero from './Hero';
@@ -22,9 +24,13 @@ export default function Home() {
   const { products } = useSelector((state) => state.products);
   const { isLoading, errorMessage } = useSelector((state) => state.errors);
 
+  const loadFeatured = useCallback(() => dispatch(fetchProducts(FEATURED_QUERY)), [dispatch]);
+
   useEffect(() => {
-    dispatch(fetchProducts(FEATURED_QUERY));
-  }, [dispatch]);
+    loadFeatured();
+  }, [loadFeatured]);
+
+  useRetryWhenVisible(Boolean(errorMessage), loadFeatured);
 
   const featured = Array.isArray(products) ? products.slice(0, FEATURED_COUNT) : [];
 
@@ -46,7 +52,14 @@ export default function Home() {
           {isLoading ? (
             <ProductGridSkeleton count={FEATURED_COUNT} />
           ) : errorMessage ? (
-            <ErrorState message={errorMessage} />
+            <ErrorState
+              message={errorMessage}
+              action={
+                <Button variant="secondary" size="sm" onClick={loadFeatured}>
+                  Tentar de novo
+                </Button>
+              }
+            />
           ) : featured.length === 0 ? (
             <EmptyState
               title="Nenhum produto por aqui ainda"

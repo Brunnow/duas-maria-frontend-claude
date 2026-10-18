@@ -36,7 +36,12 @@ export const errorReducer = (state = initialState, action) => {
         ...state,
         categoryLoader: true,
         categoryError: null,
-        errorMessage: null,
+      };
+    case 'CATEGORY_ERROR':
+      return {
+        ...state,
+        categoryLoader: false,
+        categoryError: action.payload,
       };
 
     default:

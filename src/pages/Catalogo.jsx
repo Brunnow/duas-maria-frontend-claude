@@ -11,6 +11,7 @@ import ErrorState from '@/components/shared/ErrorState';
 import ProductGrid from '@/components/shared/ProductGrid';
 import ProductGridSkeleton from '@/components/shared/ProductGridSkeleton';
 import { useCatalog } from '@/hooks/useCatalog';
+import { useRetryWhenVisible } from '@/hooks/useRetryWhenVisible';
 import { fetchCategories } from '@/store/actions';
 
 const PAGE_SIZE_HINT = 12;
@@ -19,13 +20,15 @@ export default function Catalogo() {
   const dispatch = useDispatch();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const { filters, setCategory, setSort, setKeyword, setPage, clear } = useCatalog();
+  const { filters, setCategory, setSort, setKeyword, setPage, clear, reload } = useCatalog();
   const { products, categories, pagination } = useSelector((state) => state.products);
   const { isLoading, errorMessage } = useSelector((state) => state.errors);
 
   useEffect(() => {
     dispatch(fetchCategories());
   }, [dispatch]);
+
+  useRetryWhenVisible(Boolean(errorMessage), reload);
 
   const list = Array.isArray(products) ? products : [];
   const total = pagination?.totalElements ?? 0;
@@ -75,7 +78,14 @@ export default function Catalogo() {
           {isLoading ? (
             <ProductGridSkeleton count={PAGE_SIZE_HINT} />
           ) : errorMessage ? (
-            <ErrorState message={errorMessage} />
+            <ErrorState
+              message={errorMessage}
+              action={
+                <Button variant="secondary" size="sm" onClick={reload}>
+                  Tentar de novo
+                </Button>
+              }
+            />
           ) : list.length === 0 ? (
             <EmptyState
               title="Nenhum produto encontrado"

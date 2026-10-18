@@ -26,9 +26,33 @@ export function onUnauthorized(handler) {
  */
 const SESSION_NEUTRAL_401 = ['/carts/users/cart', '/auth/user'];
 
+/*
+ * Falha de rede (sem resposta do servidor) em GET: tenta de novo até duas
+ * vezes. Navegadores embutidos em apps (ex.: o app do Google no iPhone)
+ * pré-carregam a página e cortam conexões ao trocar de tela; sem isto a
+ * cliente via "Algo deu errado" por um corte que uma nova tentativa resolve.
+ * Só GET: repetir POST/PUT poderia duplicar uma ação.
+ */
+const NETWORK_RETRY_DELAYS_MS = [500, 1500];
+
+function shouldRetryNetworkError(error) {
+  const config = error?.config;
+  if (!config || error.response || axios.isCancel(error)) return false;
+  if ((config.method || 'get').toLowerCase() !== 'get') return false;
+  return (config.__networkRetries || 0) < NETWORK_RETRY_DELAYS_MS.length;
+}
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    if (shouldRetryNetworkError(error)) {
+      const config = error.config;
+      const attempt = config.__networkRetries || 0;
+      config.__networkRetries = attempt + 1;
+      await new Promise((resolve) => setTimeout(resolve, NETWORK_RETRY_DELAYS_MS[attempt]));
+      return api(config);
+    }
+
     const url = error?.config?.url || '';
     const neutral = SESSION_NEUTRAL_401.some((path) => url.includes(path));
     if (error?.response?.status === 401 && !neutral) {

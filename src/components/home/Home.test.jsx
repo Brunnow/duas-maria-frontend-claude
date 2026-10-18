@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
@@ -13,11 +13,11 @@ vi.mock('./CategoryShowcase', () => ({ default: () => null }));
 
 const product = { productId: 9, productName: 'Blusa Seda', image: '', quantity: 3, price: 120 };
 
-const renderHome = (products) => {
+const renderHome = (products, errorMessage = null) => {
   const store = configureStore({
     reducer: {
       products: () => ({ products }),
-      errors: () => ({ isLoading: false, errorMessage: null }),
+      errors: () => ({ isLoading: false, errorMessage }),
     },
   });
   return render(
@@ -48,5 +48,18 @@ describe('Home — peças em destaque', () => {
   it('sem produtos, nao mostra o link', () => {
     renderHome([]);
     expect(screen.queryByRole('link', { name: 'Ver todos os produtos' })).not.toBeInTheDocument();
+  });
+
+  it('erro ao carregar mostra "Tentar de novo", que busca de novo', () => {
+    renderHome([], 'Não conseguimos carregar os produtos agora.');
+    expect(fetchProducts).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    expect(fetchProducts).toHaveBeenCalledTimes(2);
+  });
+
+  it('com erro na tela, busca de novo quando a pagina volta a ficar visivel', () => {
+    renderHome([], 'Não conseguimos carregar os produtos agora.');
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(fetchProducts).toHaveBeenCalledTimes(2);
   });
 });
