@@ -95,7 +95,7 @@ export default function LaunchPromo() {
       <p className="pr-8 font-display text-lg leading-snug text-foreground">
         ✨ O site da Duas Maria chegou!
       </p>
-      <p className="mt-1 text-sm text-muted">Para comemorar, use um dos cupons:</p>
+      <p className="mt-1 text-sm text-muted">Para comemorar, use os dois cupons juntos e ganhe 30% off:</p>
 
       <ul className="mt-3 space-y-2">
         {LAUNCH_PROMO_COUPONS.map(({ code, description }) => (
