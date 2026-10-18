@@ -15,7 +15,7 @@ const shipping = {
 
 describe('OrderReview', () => {
   it('sem cupom: A pagar = produtos + frete, sem linha de desconto', () => {
-    render(<OrderReview items={items} address={null} shipping={shipping} coupon={null} />);
+    render(<OrderReview items={items} address={null} shipping={shipping} coupons={[]} />);
 
     // 200 + 14,90
     expect(screen.getByText(/R\$\s*214,90/)).toBeInTheDocument();
@@ -28,13 +28,31 @@ describe('OrderReview', () => {
         items={items}
         address={null}
         shipping={shipping}
-        coupon={{ code: 'PROMO10', discountAmount: 20 }}
+        coupons={[{ code: 'PROMO10', discountAmount: 20 }]}
       />,
     );
 
     expect(screen.getByText(/Desconto.*PROMO10/)).toBeInTheDocument();
     // 200 - 20 + 14,90
     expect(screen.getByText(/R\$\s*194,90/)).toBeInTheDocument();
+  });
+
+  it('com dois cupons: soma os descontos e mostra os dois codigos', () => {
+    render(
+      <OrderReview
+        items={items}
+        address={null}
+        shipping={shipping}
+        coupons={[
+          { code: 'ESQUENTA20', discountAmount: 40 },
+          { code: 'PRIMEIRACOMPRA', discountAmount: 20 },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Desconto · ESQUENTA20 + PRIMEIRACOMPRA')).toBeInTheDocument();
+    // 200 - 60 + 14,90
+    expect(screen.getByText(/R\$\s*154,90/)).toBeInTheDocument();
   });
 
   it('mostra transportadora e servico quando o frete e uma opcao real do Melhor Envio', () => {
@@ -49,7 +67,7 @@ describe('OrderReview', () => {
           price: 27.6,
           deliveryDays: 7,
         }}
-        coupon={null}
+        coupons={[]}
       />,
     );
 
@@ -62,7 +80,7 @@ describe('OrderReview', () => {
         items={items}
         address={null}
         shipping={shipping}
-        coupon={{ code: 'BIG', discountAmount: 500 }}
+        coupons={[{ code: 'BIG', discountAmount: 500 }]}
       />,
     );
 

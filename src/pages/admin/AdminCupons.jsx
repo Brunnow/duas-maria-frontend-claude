@@ -25,6 +25,7 @@ const EMPTY_FORM = {
   maxRedemptions: '',
   maxRedemptionsPerUser: '',
   active: true,
+  stackable: false,
 };
 
 // "2026-09-06T14:30:00" -> "2026-09-06T14:30" (valor do input datetime-local)
@@ -42,6 +43,7 @@ function fromCoupon(c) {
     maxRedemptions: c.maxRedemptions ?? '',
     maxRedemptionsPerUser: c.maxRedemptionsPerUser ?? '',
     active: c.active,
+    stackable: Boolean(c.stackable),
   };
 }
 
@@ -62,6 +64,7 @@ function toBody(form) {
     maxRedemptions: num(form.maxRedemptions),
     maxRedemptionsPerUser: num(form.maxRedemptionsPerUser),
     active: form.active,
+    stackable: form.stackable,
   };
 }
 
@@ -250,6 +253,10 @@ export default function AdminCupons() {
             <input type="checkbox" checked={form.active} onChange={set('active')} />
             Ativo
           </label>
+          <label className="flex items-center gap-2 text-sm text-foreground sm:col-span-2">
+            <input type="checkbox" checked={form.stackable} onChange={set('stackable')} />
+            Pode ser combinado com outro cupom (até 2 por pedido, só entre cupons marcados)
+          </label>
           {formError && (
             <p role="alert" className="text-sm text-danger sm:col-span-2">
               {formError}
@@ -293,6 +300,11 @@ export default function AdminCupons() {
                     <Badge tone={coupon.active ? 'success' : 'neutral'} className="ml-1">
                       {coupon.active ? 'Ativo' : 'Inativo'}
                     </Badge>
+                    {coupon.stackable && (
+                      <Badge tone="accent" className="ml-1">
+                        Combinável
+                      </Badge>
+                    )}
                   </p>
                   <p className="text-xs text-muted">{couponSubtitle(coupon)}</p>
                 </div>

@@ -112,6 +112,39 @@ describe('AdminCupons', () => {
     );
   });
 
+  it('desativar um cupom combinavel mantem a marcacao de combinavel', async () => {
+    svc.listCoupons.mockResolvedValue([{ ...coupon, stackable: true }]);
+    svc.updateCoupon.mockResolvedValue({ ...coupon, stackable: true, active: false });
+    renderWithProviders(<AdminCupons />, { preloadedState: adminAuth });
+    expect(await screen.findByText('Combinável')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Desativar' }));
+
+    await waitFor(() =>
+      expect(svc.updateCoupon).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ active: false, stackable: true }),
+      ),
+    );
+  });
+
+  it('marca um cupom novo como combinavel', async () => {
+    svc.listCoupons.mockResolvedValue([]);
+    svc.createCoupon.mockResolvedValue({ ...coupon, id: 2 });
+    renderWithProviders(<AdminCupons />, { preloadedState: adminAuth });
+    await screen.findByText('Nenhum cupom');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Novo cupom' }));
+    fireEvent.change(screen.getByLabelText('Código'), { target: { value: 'esquenta20' } });
+    fireEvent.change(screen.getByLabelText('Valor (%)'), { target: { value: '20' } });
+    fireEvent.click(screen.getByLabelText(/Pode ser combinado com outro cupom/));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar cupom' }));
+
+    await waitFor(() =>
+      expect(svc.createCoupon).toHaveBeenCalledWith(expect.objectContaining({ stackable: true })),
+    );
+  });
+
   it('mostra a mensagem do backend quando a exclusão é bloqueada', async () => {
     svc.listCoupons.mockResolvedValue([coupon]);
     svc.deleteCoupon.mockRejectedValue({

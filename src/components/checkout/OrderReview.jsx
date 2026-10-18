@@ -3,12 +3,14 @@ import { addressLines } from '@/lib/address';
 import { formatShipping, shippingOptionLabel } from '@/lib/shipping';
 import OptimizedImage from '@/components/shared/OptimizedImage';
 
-export default function OrderReview({ items, address, shipping, coupon }) {
+export default function OrderReview({ items, address, shipping, coupons = [] }) {
   const productsTotal = items.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
   const count = items.reduce((n, item) => n + (item.quantity || 0), 0);
   const shippingAmount = Number(shipping?.price) || 0;
   // Preview: o backend recalcula o desconto ao criar o pedido.
-  const discount = Math.min(Number(coupon?.discountAmount) || 0, productsTotal);
+  const couponTotal = coupons.reduce((sum, c) => sum + (Number(c.discountAmount) || 0), 0);
+  const discount = Math.min(couponTotal, productsTotal);
+  const couponLabel = coupons.map((c) => c.code).join(' + ');
   const total = productsTotal - discount + shippingAmount;
 
   return (
@@ -72,7 +74,7 @@ export default function OrderReview({ items, address, shipping, coupon }) {
         </div>
         {discount > 0 && (
           <div className="mt-2 flex items-center justify-between text-sm">
-            <span className="text-muted">Desconto{coupon?.code ? ` · ${coupon.code}` : ''}</span>
+            <span className="text-muted">Desconto{couponLabel ? ` · ${couponLabel}` : ''}</span>
             <span className="text-foreground">−{formatCurrency(discount)}</span>
           </div>
         )}

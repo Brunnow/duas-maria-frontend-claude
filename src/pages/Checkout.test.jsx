@@ -277,7 +277,7 @@ describe('Checkout', () => {
     await waitFor(() =>
       expect(createOrder).toHaveBeenCalledWith({
         addressId: 1,
-        couponCode: undefined,
+        couponCodes: [],
         shippingServiceId: 'FIXED_UF',
       }),
     );
@@ -316,7 +316,61 @@ describe('Checkout', () => {
     await waitFor(() =>
       expect(createOrder).toHaveBeenCalledWith({
         addressId: 1,
-        couponCode: 'PROMO10',
+        couponCodes: ['PROMO10'],
+        shippingServiceId: 'FIXED_UF',
+      }),
+    );
+  });
+
+  it('aplica dois cupons combinaveis: soma o desconto e envia os dois codigos', async () => {
+    validateCoupon
+      .mockResolvedValueOnce({
+        code: 'ESQUENTA20',
+        discountAmount: 51.98,
+        totalDiscountAmount: 51.98,
+        coupons: [{ code: 'ESQUENTA20', discountAmount: 51.98 }],
+      })
+      .mockResolvedValueOnce({
+        code: 'PRIMEIRACOMPRA',
+        discountAmount: 25.99,
+        totalDiscountAmount: 77.97,
+        coupons: [
+          { code: 'ESQUENTA20', discountAmount: 51.98 },
+          { code: 'PRIMEIRACOMPRA', discountAmount: 25.99 },
+        ],
+      });
+    createOrder.mockResolvedValue({
+      order: { orderId: 6, orderStatus: 'AGUARDANDO_PAGAMENTO', paymentStatus: 'PENDING' },
+      initPoint: 'https://mp/redirect',
+      paymentInitFailed: false,
+    });
+
+    renderCheckout();
+    await goThroughSteps();
+
+    fireEvent.change(screen.getByLabelText('Cupom de desconto'), {
+      target: { value: 'ESQUENTA20' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
+    fireEvent.change(await screen.findByLabelText('Tem outro cupom?'), {
+      target: { value: 'PRIMEIRACOMPRA' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
+
+    await waitFor(() =>
+      expect(validateCoupon).toHaveBeenLastCalledWith('PRIMEIRACOMPRA', ['ESQUENTA20']),
+    );
+    expect(await screen.findByText('Desconto · ESQUENTA20 + PRIMEIRACOMPRA')).toBeInTheDocument();
+    // 259,90 - 77,97 + 14,90 de frete = 196,83
+    expect(screen.getByText(/R\$\s*196,83/)).toBeInTheDocument();
+    // com 2 cupons nao ha campo para um terceiro
+    expect(screen.queryByLabelText('Tem outro cupom?')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ir para o pagamento' }));
+    await waitFor(() =>
+      expect(createOrder).toHaveBeenCalledWith({
+        addressId: 1,
+        couponCodes: ['ESQUENTA20', 'PRIMEIRACOMPRA'],
         shippingServiceId: 'FIXED_UF',
       }),
     );

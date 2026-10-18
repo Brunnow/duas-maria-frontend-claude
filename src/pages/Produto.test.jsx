@@ -89,6 +89,7 @@ describe('Produto (PDP)', () => {
     renderAt(7);
 
     await screen.findByRole('heading', { name: 'Blazer Alfaiataria' });
+    await waitFor(() => expect(document.getElementById('seo-jsonld')).not.toBeNull());
     const data = JSON.parse(document.getElementById('seo-jsonld').textContent);
     expect(document.title).toBe('Blazer Alfaiataria | Duas Maria');
     expect(data.brand).toBeUndefined();

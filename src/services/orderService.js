@@ -19,13 +19,16 @@ import api from '@/api/api';
 export function createOrder({
   addressId,
   paymentMethod = 'mercadopago',
-  couponCode,
+  couponCodes = [],
   shippingServiceId,
 }) {
   const body = {
     addressId,
     paymentMethod,
-    couponCode: couponCode || undefined,
+    // couponCode (o primeiro) continua indo para um backend ainda sem suporte
+    // a dois cupons aplicar pelo menos um; o backend novo junta os dois campos.
+    couponCode: couponCodes[0] || undefined,
+    couponCodes: couponCodes.length > 0 ? couponCodes : undefined,
     shippingServiceId: shippingServiceId ?? undefined,
   };
   return api.post('/orders', body).then((response) => response.data);

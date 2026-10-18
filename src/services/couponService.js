@@ -10,6 +10,10 @@ import api from '@/api/api';
  * O valor mostrado aqui é informativo; o backend recalcula o desconto na
  * criação do pedido (não confia neste número).
  */
-export function validateCoupon(code) {
-  return api.post('/coupons/validate', { code }).then((response) => response.data);
+export function validateCoupon(code, appliedCodes = []) {
+  // appliedCodes: cupons já aplicados no checkout. O backend valida a
+  // combinação (máx. 2, todos combináveis) e devolve `coupons` com a parte de
+  // cada um e `totalDiscountAmount`.
+  const body = appliedCodes.length > 0 ? { code, appliedCodes } : { code };
+  return api.post('/coupons/validate', body).then((response) => response.data);
 }

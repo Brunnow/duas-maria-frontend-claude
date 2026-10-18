@@ -31,7 +31,7 @@ export default function Checkout() {
   const [step, setStep] = useState(0);
   const [addressId, setAddressId] = useState(null);
   const [shippingServiceId, setShippingServiceId] = useState(null);
-  const [coupon, setCoupon] = useState(null); // { code, discountAmount } | null
+  const [coupons, setCoupons] = useState([]); // [{ code, discountAmount }] — até 2
   const [placing, setPlacing] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState(null);
@@ -46,8 +46,7 @@ export default function Checkout() {
 
   // Com um único endereço cadastrado, ele já vem escolhido — antes o
   // "Continuar" ficava desativado sem explicação até a cliente clicar nele.
-  const effectiveAddressId =
-    addressId ?? (addresses.length === 1 ? addresses[0].addressId : null);
+  const effectiveAddressId = addressId ?? (addresses.length === 1 ? addresses[0].addressId : null);
   const selectedAddress = addresses.find((a) => a.addressId === effectiveAddressId);
   const uf = selectedAddress?.state || null;
   const cep = selectedAddress?.pincode || null;
@@ -134,7 +133,7 @@ export default function Checkout() {
     try {
       const { order, initPoint, paymentInitFailed } = await createOrder({
         addressId: effectiveAddressId,
-        couponCode: coupon?.code,
+        couponCodes: coupons.map((c) => c.code),
         shippingServiceId: effectiveShippingServiceId,
       });
       if (paymentInitFailed || !initPoint) {
@@ -171,11 +170,7 @@ export default function Checkout() {
 
       <div className="mt-8">
         {step === 0 && (
-          <AddressPicker
-            addresses={addresses}
-            value={effectiveAddressId}
-            onChange={setAddressId}
-          />
+          <AddressPicker addresses={addresses} value={effectiveAddressId} onChange={setAddressId} />
         )}
         {step === 1 && (
           <ShippingStep
@@ -192,9 +187,13 @@ export default function Checkout() {
               items={items}
               address={selectedAddress}
               shipping={selectedShippingOption}
-              coupon={coupon}
+              coupons={coupons}
             />
-            <CouponField value={coupon} onApply={setCoupon} onRemove={() => setCoupon(null)} />
+            <CouponField
+              value={coupons}
+              onApply={setCoupons}
+              onRemove={(code) => setCoupons((list) => list.filter((c) => c.code !== code))}
+            />
           </>
         )}
       </div>
