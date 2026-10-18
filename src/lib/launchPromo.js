@@ -5,7 +5,7 @@
  */
 export const LAUNCH_PROMO_COUPONS = [
   { code: 'PRIMEIRACOMPRA', description: '10% off na primeira compra' },
-  { code: 'ESQUENTA20', description: 'Cupom do esquenta de lançamento' },
+  { code: 'ESQUENTA20', description: '20% off no esquenta de lançamento' },
 ];
 
 /** Último instante em que o card aparece (horário de Brasília). */
