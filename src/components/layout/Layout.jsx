@@ -4,6 +4,7 @@ import AnnouncementBar from './AnnouncementBar';
 import FloatingWhatsApp from './FloatingWhatsApp';
 import Footer from './Footer';
 import Header from './Header';
+import LaunchPromo from './LaunchPromo';
 
 /** Casca comum a todas as rotas: header fixo, conteudo, footer e o drawer do carrinho. */
 export default function Layout() {
@@ -17,6 +18,7 @@ export default function Layout() {
       <Footer />
       <CartDrawer />
       <FloatingWhatsApp />
+      <LaunchPromo />
     </div>
   );
 }
