@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /conta
+Disallow: /carrinho
+Disallow: /checkout
+Disallow: /pedidos
+Disallow: /login
+Disallow: /cadastro
+
+Sitemap: https://api.duasmariaoficial.com.br/api/public/sitemap.xml

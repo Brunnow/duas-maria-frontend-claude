@@ -10,6 +10,7 @@ import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import ProductGrid from '@/components/shared/ProductGrid';
 import ProductGridSkeleton from '@/components/shared/ProductGridSkeleton';
+import Seo from '@/components/shared/Seo';
 import { useCatalog } from '@/hooks/useCatalog';
 import { useRetryWhenVisible } from '@/hooks/useRetryWhenVisible';
 import { fetchCategories } from '@/store/actions';
@@ -47,8 +48,22 @@ export default function Catalogo() {
     hasActiveFilters,
   };
 
+  const seoTitle = filters.keyword
+    ? `Busca: ${filters.keyword}`
+    : filters.category
+      ? `${filters.category} — Moda feminina`
+      : 'Produtos — Moda feminina';
+
   return (
     <Container className="py-10 lg:py-14">
+      <Seo
+        title={seoTitle}
+        description={
+          filters.category
+            ? `${filters.category} na Duas Maria: peças femininas com curadoria, entrega para todo o Brasil e até 6x sem juros.`
+            : 'Vestidos, blusas, calças e mais: veja todas as peças da Duas Maria, com entrega para todo o Brasil e até 6x sem juros.'
+        }
+      />
       <header className="flex flex-col gap-2 border-b border-border pb-6">
         <nav className="text-xs text-muted">
           Início / <span className="text-foreground">Produtos</span>

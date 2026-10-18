@@ -8,6 +8,7 @@ import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import ProductGrid from '@/components/shared/ProductGrid';
 import ProductGridSkeleton from '@/components/shared/ProductGridSkeleton';
+import Seo from '@/components/shared/Seo';
 import { useRetryWhenVisible } from '@/hooks/useRetryWhenVisible';
 import { fetchProducts } from '@/store/actions';
 import CategoryShowcase from './CategoryShowcase';
@@ -36,6 +37,7 @@ export default function Home() {
 
   return (
     <>
+      <Seo />
       <Hero />
 
       <HighlightsStrip />

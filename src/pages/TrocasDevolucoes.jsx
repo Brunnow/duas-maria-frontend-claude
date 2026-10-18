@@ -1,16 +1,29 @@
 import { FiCalendar, FiRefreshCw, FiTag, FiTruck } from 'react-icons/fi';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
+import Seo from '@/components/shared/Seo';
 import { STORE_WHATSAPP_URL } from '@/lib/contact';
 import { RETURN_WINDOW_DAYS } from '@/lib/returnPolicy';
 
 const DAYS = `${RETURN_WINDOW_DAYS} dias`;
 
 const HIGHLIGHTS = [
-  { Icon: FiCalendar, title: `${DAYS} para trocar ou devolver`, text: 'Contados a partir do recebimento.' },
-  { Icon: FiTruck, title: 'Primeira troca por nossa conta', text: 'O frete da 1ª troca ou devolução de cada pedido é grátis.' },
+  {
+    Icon: FiCalendar,
+    title: `${DAYS} para trocar ou devolver`,
+    text: 'Contados a partir do recebimento.',
+  },
+  {
+    Icon: FiTruck,
+    title: 'Primeira troca por nossa conta',
+    text: 'O frete da 1ª troca ou devolução de cada pedido é grátis.',
+  },
   { Icon: FiTag, title: 'Com etiqueta e sem uso', text: 'A peça precisa voltar como chegou.' },
-  { Icon: FiRefreshCw, title: 'Promoção não tem troca', text: 'Arrependimento e defeito continuam garantidos.' },
+  {
+    Icon: FiRefreshCw,
+    title: 'Promoção não tem troca',
+    text: 'Arrependimento e defeito continuam garantidos.',
+  },
 ];
 
 const STEPS = [
@@ -32,6 +45,10 @@ function Section({ title, children }) {
 export default function TrocasDevolucoes() {
   return (
     <Container className="py-10 lg:py-14">
+      <Seo
+        title="Trocas e devoluções"
+        description={`Troca de tamanho e devolução em até ${DAYS} do recebimento, com a primeira troca de cada pedido por nossa conta. Veja as condições da Duas Maria.`}
+      />
       <div className="mx-auto flex max-w-3xl flex-col gap-8">
         <header>
           <h1 className="font-display text-3xl text-foreground lg:text-4xl">Trocas e devoluções</h1>

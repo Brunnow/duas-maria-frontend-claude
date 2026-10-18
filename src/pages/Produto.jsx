@@ -8,12 +8,14 @@ import Price from '@/components/ui/Price';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import Seo from '@/components/shared/Seo';
 import ProductGallery from '@/components/product/ProductGallery';
 import SizeSelector from '@/components/product/SizeSelector';
 import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import { addToCart, openDrawer } from '@/features/cart/cartSlice';
 import { useProduct } from '@/hooks/useProduct';
 import { cn } from '@/lib/cn';
+import { siteOrigin } from '@/lib/seo';
 import { RETURN_POLICY_PATH, RETURN_WINDOW_DAYS, isOnSale } from '@/lib/returnPolicy';
 
 const LOW_STOCK = 5;
@@ -112,6 +114,14 @@ export default function Produto() {
 
   return (
     <Container className="py-10 lg:py-14">
+      {status === 'ready' && product && (
+        <ProductSeo
+          product={product}
+          inStock={
+            variants.length > 0 ? variants.some((v) => v.inStock) : Number(product.quantity) > 0
+          }
+        />
+      )}
       {status === 'loading' && <ProdutoSkeleton />}
 
       {status === 'notfound' && (
@@ -285,5 +295,44 @@ export default function Produto() {
         </>
       )}
     </Container>
+  );
+}
+
+/**
+ * Título e descrição do produto no Google, e os dados estruturados (preço,
+ * disponibilidade) que permitem ao Google mostrar o preço no resultado.
+ */
+function ProductSeo({ product, inStock }) {
+  const onSale = isOnSale(product.price, product.specialPrice);
+  const price = Number(onSale ? product.specialPrice : product.price);
+  const url = `${siteOrigin()}/produtos/${product.productId}`;
+  const description =
+    product.description ||
+    `${product.productName} na Duas Maria. Entrega para todo o Brasil e até 6x sem juros.`;
+
+  return (
+    <Seo
+      title={product.productName}
+      description={description}
+      image={product.image}
+      type="product"
+      jsonLd={{
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: product.productName,
+        description,
+        image: product.image ? [product.image] : undefined,
+        sku: String(product.productId),
+        brand: { '@type': 'Brand', name: 'Duas Maria' },
+        offers: {
+          '@type': 'Offer',
+          url,
+          priceCurrency: 'BRL',
+          price: Number.isFinite(price) ? price.toFixed(2) : undefined,
+          availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+          itemCondition: 'https://schema.org/NewCondition',
+        },
+      }}
+    />
   );
 }
