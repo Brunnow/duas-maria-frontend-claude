@@ -26,6 +26,13 @@ export function updateProduct(productId, product) {
   return api.put(`/admin/products/${productId}`, product).then((response) => response.data);
 }
 
+/** PUT /api/admin/products/{productId}/category/{categoryId} — só muda a categoria. */
+export function changeProductCategory(productId, categoryId) {
+  return api
+    .put(`/admin/products/${productId}/category/${categoryId}`)
+    .then((response) => response.data);
+}
+
 /** DELETE /api/admin/products/{productId} */
 export function deleteProduct(productId) {
   return api.delete(`/admin/products/${productId}`).then((response) => response.data);

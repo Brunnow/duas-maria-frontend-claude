@@ -10,6 +10,7 @@ vi.mock('@/services/adminService', () => ({
   listProducts: vi.fn(),
   createProduct: vi.fn(),
   updateProduct: vi.fn(),
+  changeProductCategory: vi.fn(),
   deleteProduct: vi.fn(),
   uploadProductImage: vi.fn(),
   listProductImages: vi.fn().mockResolvedValue([]),
@@ -137,6 +138,47 @@ describe('AdminProdutos', () => {
     await waitFor(() => expect(adminService.listProductImages).toHaveBeenCalledWith(9));
     expect(scrollIntoView).toHaveBeenCalled();
     expect(screen.getByText(/Adicione as fotos abaixo/)).toBeInTheDocument();
+  });
+
+  it('edita um produto e muda a categoria dele', async () => {
+    adminService.listProducts.mockResolvedValue({
+      ...PAGE,
+      content: [{ ...PAGE.content[0], description: 'Vestido midi de linho' }],
+    });
+    adminService.updateProduct.mockResolvedValue({ productId: 1 });
+    adminService.changeProductCategory.mockResolvedValue({ productId: 1 });
+
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Vestido Midi');
+
+    fireEvent.click(screen.getByRole('button', { name: /Editar/ }));
+    const select = screen.getByLabelText('Mudar categoria');
+    expect(select).toHaveValue('');
+    fireEvent.change(select, { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }));
+
+    await waitFor(() => expect(adminService.changeProductCategory).toHaveBeenCalledWith(1, 7));
+    expect(adminService.updateProduct).toHaveBeenCalled();
+    expect(
+      await screen.findByText('Produto atualizado e movido de categoria.'),
+    ).toBeInTheDocument();
+  });
+
+  it('editar sem escolher categoria nao muda a categoria', async () => {
+    adminService.listProducts.mockResolvedValue({
+      ...PAGE,
+      content: [{ ...PAGE.content[0], description: 'Vestido midi de linho' }],
+    });
+    adminService.updateProduct.mockResolvedValue({ productId: 1 });
+
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+    await screen.findByText('Vestido Midi');
+
+    fireEvent.click(screen.getByRole('button', { name: /Editar/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }));
+
+    await waitFor(() => expect(adminService.updateProduct).toHaveBeenCalled());
+    expect(adminService.changeProductCategory).not.toHaveBeenCalled();
   });
 
   it('aceita preço com vírgula (teclado pt-BR do celular)', async () => {

@@ -105,6 +105,12 @@ export default function AdminProdutos() {
     try {
       if (product.productId) {
         await adminService.updateProduct(product.productId, product);
+        if (categoryId) {
+          // Depois dos dados: a checagem de nome repetido na categoria nova
+          // usa o nome já salvo.
+          await adminService.changeProductCategory(product.productId, categoryId);
+          setNotice('Produto atualizado e movido de categoria.');
+        }
         setEditing(null);
         refetch();
       } else {

@@ -35,8 +35,9 @@ function toForm(product) {
 }
 
 /**
- * Formulario de produto (criar/editar). Na criacao pede a categoria;
- * a edicao nao troca de categoria (o backend nao expoe isso).
+ * Formulario de produto (criar/editar). Na criacao pede a categoria; na
+ * edicao a categoria e opcional ("Manter a categoria atual") e, se escolhida,
+ * o produto e movido por um endpoint proprio.
  */
 export default function ProductForm({
   product,
@@ -83,7 +84,7 @@ export default function ProductForm({
     }
 
     onSubmit({
-      categoryId: isEdit ? undefined : Number(categoryId),
+      categoryId: categoryId ? Number(categoryId) : undefined,
       product: {
         ...(isEdit ? { productId: product.productId } : {}),
         productName: values.productName.trim(),
@@ -162,27 +163,25 @@ export default function ProductForm({
         error={errors.discount}
       />
 
-      {!isEdit && (
-        <div className="sm:col-span-2">
-          <Select
-            label="Categoria"
-            value={categoryId}
-            onChange={(event) => {
-              setCategoryId(event.target.value);
-              setErrors((prev) => ({ ...prev, categoryId: undefined }));
-            }}
-            aria-invalid={errors.categoryId ? true : undefined}
-          >
-            <option value="">Selecione…</option>
-            {categories.map((c) => (
-              <option key={c.categoryId} value={c.categoryId}>
-                {c.categoryName}
-              </option>
-            ))}
-          </Select>
-          {errors.categoryId && <p className="mt-1 text-xs text-danger">{errors.categoryId}</p>}
-        </div>
-      )}
+      <div className="sm:col-span-2">
+        <Select
+          label={isEdit ? 'Mudar categoria' : 'Categoria'}
+          value={categoryId}
+          onChange={(event) => {
+            setCategoryId(event.target.value);
+            setErrors((prev) => ({ ...prev, categoryId: undefined }));
+          }}
+          aria-invalid={errors.categoryId ? true : undefined}
+        >
+          <option value="">{isEdit ? 'Manter a categoria atual' : 'Selecione…'}</option>
+          {categories.map((c) => (
+            <option key={c.categoryId} value={c.categoryId}>
+              {c.categoryName}
+            </option>
+          ))}
+        </Select>
+        {errors.categoryId && <p className="mt-1 text-xs text-danger">{errors.categoryId}</p>}
+      </div>
 
       <p className="text-sm text-muted sm:col-span-2">
         Preço final: <span className="text-foreground">{formatCurrency(specialPrice)}</span>
