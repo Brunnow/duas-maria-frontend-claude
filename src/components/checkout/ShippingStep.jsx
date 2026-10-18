@@ -1,7 +1,12 @@
 import Button from '@/components/ui/Button';
 import Skeleton from '@/components/ui/Skeleton';
 import { formatCurrency } from '@/lib/format';
-import { shippingOptionLabel } from '@/lib/shipping';
+import {
+  LOCAL_DELIVERY_HINT,
+  LOCAL_DELIVERY_SERVICE_ID,
+  formatShipping,
+  shippingOptionLabel,
+} from '@/lib/shipping';
 
 /*
  * Etapa de frete do checkout (Fase ME3). A cotação em si é feita pelo
@@ -51,6 +56,9 @@ export default function ShippingStep({ shipping, uf, selectedServiceId, onSelect
                 />
                 <span>
                   <span className="block text-foreground">{shippingOptionLabel(option)}</span>
+                  {option.serviceId === LOCAL_DELIVERY_SERVICE_ID && (
+                    <span className="block text-xs text-muted">{LOCAL_DELIVERY_HINT}</span>
+                  )}
                   {option.deliveryDays != null && (
                     <span className="block text-xs text-muted">
                       Chega em até {option.deliveryDays}{' '}
@@ -72,6 +80,8 @@ export default function ShippingStep({ shipping, uf, selectedServiceId, onSelect
                     </span>
                   )}
                 </span>
+              ) : Number(option.price) === 0 ? (
+                <span className="font-medium text-success">{formatShipping(option.price)}</span>
               ) : (
                 <span className="font-medium text-foreground">{formatCurrency(option.price)}</span>
               )}

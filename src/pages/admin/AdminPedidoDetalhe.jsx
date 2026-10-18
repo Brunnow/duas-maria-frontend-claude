@@ -20,6 +20,7 @@ import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { orderStatusLabel, orderStatusTone } from '@/lib/orderStatus';
 import { paymentStatusLabel, paymentStatusTone } from '@/lib/paymentStatus';
 import {
+  LOCAL_DELIVERY_METHOD,
   shippingLabelStatusLabel,
   shippingLabelStatusTone,
   formatShipping,
@@ -391,8 +392,8 @@ export default function AdminPedidoDetalhe() {
                           Reconciliar com o Mercado Pago
                         </Button>
                         <p className="mt-1 text-xs text-muted">
-                          Consulta o pagamento direto no Mercado Pago agora, sem esperar o
-                          webhook ou a checagem automática periódica.
+                          Consulta o pagamento direto no Mercado Pago agora, sem esperar o webhook
+                          ou a checagem automática periódica.
                         </p>
                         {reconcileError && (
                           <p role="alert" className="mt-1.5 text-xs text-danger">
@@ -422,7 +423,9 @@ export default function AdminPedidoDetalhe() {
                               {returnItemLine(i)}
                             </span>
                           ))}
-                          {returnRefundText(r) && <span className="block">{returnRefundText(r)}</span>}
+                          {returnRefundText(r) && (
+                            <span className="block">{returnRefundText(r)}</span>
+                          )}
                           <span className="block">
                             {r.defective && 'Defeito · '}
                             Frete da volta: {r.freeShipping ? 'loja' : 'cliente'}
@@ -466,7 +469,9 @@ export default function AdminPedidoDetalhe() {
                       onClose={() => setReturnOpen(false)}
                       onDone={() => {
                         setReturnOpen(false);
-                        setReturnOk('Registrado. Estoque atualizado e a cliente foi avisada por e-mail.');
+                        setReturnOk(
+                          'Registrado. Estoque atualizado e a cliente foi avisada por e-mail.',
+                        );
                         refetch();
                       }}
                     />
@@ -522,109 +527,125 @@ export default function AdminPedidoDetalhe() {
                       )}
                       {(labelActionError || order.shippingLabelError) && (
                         <p className="text-xs text-muted">
-                          Se a compra automática continuar falhando, você pode comprar o
-                          frete manualmente no painel do Melhor Envio e colar o código de
-                          rastreio na seção &quot;Rastreio&quot; abaixo.
+                          Se a compra automática continuar falhando, você pode comprar o frete
+                          manualmente no painel do Melhor Envio e colar o código de rastreio na
+                          seção &quot;Rastreio&quot; abaixo.
                         </p>
                       )}
                     </div>
                   </section>
                 )}
 
-              {(order.shippingTrackingCode ||
-                TRACKING_EDITABLE_STATUSES.includes(order.orderStatus)) && (
+              {order.shippingMethod === LOCAL_DELIVERY_METHOD && (
                 <section className="text-sm">
                   <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                    Rastreio
+                    Entrega local
                   </p>
-                  {order.shippingTrackingCode && !editingTracking ? (
-                    <div className="mt-2 flex flex-col gap-1.5">
-                      <Badge tone={trackingStatusTone(order.melhorEnvioStatus)} className="w-fit">
-                        {trackingStatusLabel(order.melhorEnvioStatus)}
-                      </Badge>
-                      <div className="text-muted">
-                        <p>Código: {order.shippingTrackingCode}</p>
-                        {order.shippingPostedAt && (
-                          <p>Postado em: {formatDateTime(order.shippingPostedAt)}</p>
-                        )}
-                        {order.shippingDeliveredAt && (
-                          <p>Entregue em: {formatDateTime(order.shippingDeliveredAt)}</p>
-                        )}
-                        {order.shippingTrackingCheckedAt && (
-                          <p>Última consulta: {formatDateTime(order.shippingTrackingCheckedAt)}</p>
-                        )}
-                      </div>
-                      {TRACKING_EDITABLE_STATUSES.includes(order.orderStatus) && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="w-fit"
-                          onClick={() => {
-                            setTrackingCode(order.shippingTrackingCode);
-                            setTrackingError(null);
-                            setEditingTracking(true);
-                          }}
-                        >
-                          Corrigir código
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <form onSubmit={submitTracking} className="mt-2 space-y-3">
-                      <p className="text-xs text-muted">
-                        Cole o código de rastreio depois de comprar a etiqueta no painel do Melhor
-                        Envio. O status é consultado na hora e continua sendo atualizado sozinho
-                        depois.
-                      </p>
-                      <div className="flex flex-col gap-1.5">
-                        <label
-                          htmlFor="tracking-code"
-                          className="text-xs font-medium uppercase tracking-wider text-muted"
-                        >
-                          Código de rastreio
-                        </label>
-                        <input
-                          id="tracking-code"
-                          type="text"
-                          value={trackingCode}
-                          maxLength={60}
-                          onChange={(e) => setTrackingCode(e.target.value)}
-                          className="w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="submit"
-                          size="sm"
-                          loading={savingTracking}
-                          disabled={!trackingCode.trim()}
-                        >
-                          Salvar rastreio
-                        </Button>
-                        {editingTracking && (
+                  <p className="mt-2 text-muted">
+                    A loja entrega (Planaltina-GO), sem etiqueta nem rastreio. Combine com a cliente
+                    pelo WhatsApp; quando sair para entrega, mude o status para Enviado e, depois de
+                    entregue, para Entregue.
+                  </p>
+                </section>
+              )}
+
+              {order.shippingMethod !== LOCAL_DELIVERY_METHOD &&
+                (order.shippingTrackingCode ||
+                  TRACKING_EDITABLE_STATUSES.includes(order.orderStatus)) && (
+                  <section className="text-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                      Rastreio
+                    </p>
+                    {order.shippingTrackingCode && !editingTracking ? (
+                      <div className="mt-2 flex flex-col gap-1.5">
+                        <Badge tone={trackingStatusTone(order.melhorEnvioStatus)} className="w-fit">
+                          {trackingStatusLabel(order.melhorEnvioStatus)}
+                        </Badge>
+                        <div className="text-muted">
+                          <p>Código: {order.shippingTrackingCode}</p>
+                          {order.shippingPostedAt && (
+                            <p>Postado em: {formatDateTime(order.shippingPostedAt)}</p>
+                          )}
+                          {order.shippingDeliveredAt && (
+                            <p>Entregue em: {formatDateTime(order.shippingDeliveredAt)}</p>
+                          )}
+                          {order.shippingTrackingCheckedAt && (
+                            <p>
+                              Última consulta: {formatDateTime(order.shippingTrackingCheckedAt)}
+                            </p>
+                          )}
+                        </div>
+                        {TRACKING_EDITABLE_STATUSES.includes(order.orderStatus) && (
                           <Button
-                            type="button"
                             size="sm"
                             variant="ghost"
+                            className="w-fit"
                             onClick={() => {
-                              setEditingTracking(false);
+                              setTrackingCode(order.shippingTrackingCode);
                               setTrackingError(null);
-                              setTrackingCode('');
+                              setEditingTracking(true);
                             }}
                           >
-                            Cancelar
+                            Corrigir código
                           </Button>
                         )}
                       </div>
-                      {trackingError && (
-                        <p role="alert" className="text-xs text-danger">
-                          {trackingError}
+                    ) : (
+                      <form onSubmit={submitTracking} className="mt-2 space-y-3">
+                        <p className="text-xs text-muted">
+                          Cole o código de rastreio depois de comprar a etiqueta no painel do Melhor
+                          Envio. O status é consultado na hora e continua sendo atualizado sozinho
+                          depois.
                         </p>
-                      )}
-                    </form>
-                  )}
-                </section>
-              )}
+                        <div className="flex flex-col gap-1.5">
+                          <label
+                            htmlFor="tracking-code"
+                            className="text-xs font-medium uppercase tracking-wider text-muted"
+                          >
+                            Código de rastreio
+                          </label>
+                          <input
+                            id="tracking-code"
+                            type="text"
+                            value={trackingCode}
+                            maxLength={60}
+                            onChange={(e) => setTrackingCode(e.target.value)}
+                            className="w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="submit"
+                            size="sm"
+                            loading={savingTracking}
+                            disabled={!trackingCode.trim()}
+                          >
+                            Salvar rastreio
+                          </Button>
+                          {editingTracking && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditingTracking(false);
+                                setTrackingError(null);
+                                setTrackingCode('');
+                              }}
+                            >
+                              Cancelar
+                            </Button>
+                          )}
+                        </div>
+                        {trackingError && (
+                          <p role="alert" className="text-xs text-danger">
+                            {trackingError}
+                          </p>
+                        )}
+                      </form>
+                    )}
+                  </section>
+                )}
 
               <section className="text-sm">
                 <p className="text-xs font-semibold uppercase tracking-wider text-foreground">

@@ -6,6 +6,15 @@ export function formatShipping(amount) {
 }
 
 /*
+ * Entrega feita pela própria loja, grátis, só para os CEPs da cidade da loja
+ * (Planaltina de Goiás — a faixa fica no backend). Sem etiqueta nem rastreio:
+ * a loja combina a entrega com a cliente.
+ */
+export const LOCAL_DELIVERY_SERVICE_ID = 'LOCAL_DELIVERY';
+export const LOCAL_DELIVERY_METHOD = 'LOCAL_DELIVERY';
+export const LOCAL_DELIVERY_HINT = 'A loja entrega e combina o horário com você pelo WhatsApp.';
+
+/*
  * Rótulo de uma opção de frete: transportadora + serviço para as opções
  * reais do Melhor Envio ("Correios · PAC", Fase ME3), ou "Entrega padrão"
  * para o fallback fixo por UF (sem transportadora/serviço — carrierName vem

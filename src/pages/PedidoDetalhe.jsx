@@ -11,6 +11,8 @@ import { fetchOrderById } from '@/services/orderService';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 import { orderStatusLabel, orderStatusTone } from '@/lib/orderStatus';
 import {
+  LOCAL_DELIVERY_HINT,
+  LOCAL_DELIVERY_METHOD,
   formatShipping,
   shippingOptionLabel,
   trackingStatusLabel,
@@ -156,6 +158,10 @@ export default function PedidoDetalhe() {
                   <p key={line}>{line}</p>
                 ))}
               </div>
+              {order.shippingMethod === LOCAL_DELIVERY_METHOD &&
+                !['ENTREGUE', 'CANCELADO'].includes(order.orderStatus) && (
+                  <p className="mt-2 text-muted">Entrega local grátis. {LOCAL_DELIVERY_HINT}</p>
+                )}
             </section>
           )}
 

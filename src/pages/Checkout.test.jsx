@@ -154,6 +154,29 @@ describe('Checkout', () => {
     expect(screen.getAllByText(/R\$\s*259,90/).length).toBeGreaterThanOrEqual(2);
   });
 
+  it('entrega local mostra "Gratis" e o aviso de que a loja combina pelo WhatsApp', async () => {
+    getShippingOptions.mockResolvedValueOnce([
+      {
+        serviceId: 'LOCAL_DELIVERY',
+        carrierName: null,
+        serviceName: 'Entrega local',
+        price: 0,
+        deliveryDays: null,
+        freeShipping: false,
+        originalPrice: null,
+      },
+    ]);
+    renderCheckout();
+
+    fireEvent.click(screen.getByRole('radio', { name: /Rua das Flores/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    expect(await screen.findByText('Entrega local')).toBeInTheDocument();
+    expect(screen.getByText('Grátis')).toBeInTheDocument();
+    expect(screen.getByText(/combina o horário com você pelo WhatsApp/)).toBeInTheDocument();
+    expect(screen.queryByText(/R\$\s*0,00/)).not.toBeInTheDocument();
+  });
+
   it('SEDEX com desconto do frete gratis mostra preco cheio riscado e cobra a diferenca', async () => {
     getShippingOptions.mockResolvedValueOnce([
       {

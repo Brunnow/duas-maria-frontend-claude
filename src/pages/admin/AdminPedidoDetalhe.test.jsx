@@ -490,6 +490,17 @@ describe('AdminPedidoDetalhe', () => {
     expect(screen.queryByText('Etiqueta de frete')).not.toBeInTheDocument();
   });
 
+  it('entrega local mostra a instrucao da loja e nao pede etiqueta nem rastreio', async () => {
+    getOrder.mockResolvedValue(detail({ order: { shippingMethod: 'LOCAL_DELIVERY' } }));
+    renderAt(77);
+
+    await screen.findByRole('heading', { name: 'Pedido #77' });
+    expect(screen.getByText('Entrega local')).toBeInTheDocument();
+    expect(screen.getByText(/sem etiqueta nem rastreio/)).toBeInTheDocument();
+    expect(screen.queryByText('Etiqueta de frete')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Código de rastreio')).not.toBeInTheDocument();
+  });
+
   it('trocar de pedido limpa o erro de compra de etiqueta do pedido anterior', async () => {
     purchaseShippingLabel.mockRejectedValue({
       response: { data: { message: 'Saldo insuficiente' } },
