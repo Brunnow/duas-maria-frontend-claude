@@ -17,6 +17,7 @@ import { fetchCategories } from '@/store/actions';
 import { formatCurrency } from '@/lib/format';
 import { productImageUrl } from '@/lib/media';
 import OptimizedImage from '@/components/shared/OptimizedImage';
+import ColorSwatch from '@/components/shared/ColorSwatch';
 
 const errText = (err, fallback) => err?.response?.data?.message || fallback;
 
@@ -220,6 +221,7 @@ export default function AdminProdutos() {
           <ProductVariantsManager
             key={managingVariants}
             productId={managingVariants}
+            productColors={list.find((p) => p.productId === managingVariants)?.colors}
             onClose={closeVariants}
           />
         </div>
@@ -296,6 +298,23 @@ export default function AdminProdutos() {
                     {formatCurrency(product.specialPrice ?? product.price)} · estoque{' '}
                     {product.stock ?? 0}
                   </p>
+                  {product.colors?.length > 0 && (
+                    <p
+                      className="mt-1 flex flex-wrap items-center gap-1"
+                      aria-label={`Cores: ${product.colors.map((c) => c.name).join(', ')}`}
+                    >
+                      {product.colors.map((c) => (
+                        <ColorSwatch
+                          key={c.name}
+                          name={c.name}
+                          hex={c.hex}
+                          image={c.image}
+                          size="sm"
+                          soldOut={!c.inStock}
+                        />
+                      ))}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-1">
                   <Button

@@ -33,9 +33,9 @@ export default function AdminHome() {
               {stuckPayments} {stuckPayments === 1 ? 'pagamento travado' : 'pagamentos travados'}
             </p>
             <p className="mt-0.5 text-muted">
-              A reconciliação automática com o Mercado Pago tentou e não conseguiu confirmar.
-              Abra o pedido e use "Reconciliar com o Mercado Pago" ou confira direto no painel
-              do Mercado Pago.
+              A reconciliação automática com o Mercado Pago tentou e não conseguiu confirmar. Abra o
+              pedido e use "Reconciliar com o Mercado Pago" ou confira direto no painel do Mercado
+              Pago.
             </p>
           </div>
           <Button as={Link} to="/admin/pedidos" variant="secondary" size="sm" className="shrink-0">
@@ -95,7 +95,7 @@ export default function AdminHome() {
                 className="flex items-center justify-between gap-2 py-2 text-sm"
               >
                 <span className="truncate text-muted">
-                  {variant.sku} · tam. {variant.size}
+                  {variant.sku} · {variant.color ? `${variant.color} · ` : ''}tam. {variant.size}
                 </span>
                 <span className={variant.stock === 0 ? 'font-medium text-danger' : 'text-warning'}>
                   {variant.stock}

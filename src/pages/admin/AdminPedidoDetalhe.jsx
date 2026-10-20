@@ -278,6 +278,7 @@ export default function AdminPedidoDetalhe() {
                           {item.product?.productName || 'Produto'}
                         </p>
                         <p className="text-xs text-muted">
+                          {item.color && <>Cor {item.color} · </>}
                           {item.size && <>Tamanho {item.size} · </>}
                           {item.sku && <>{item.sku} · </>}
                           Qtd. {item.quantity} · {formatCurrency(item.orderedProductPrice)} cada

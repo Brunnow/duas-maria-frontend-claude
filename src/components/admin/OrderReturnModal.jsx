@@ -7,10 +7,19 @@ import { formatCurrency, formatDate } from '@/lib/format';
 import { RETURN_WINDOW_DAYS } from '@/lib/returnPolicy';
 import { registerReturn } from '@/services/adminOrderService';
 import { getProductVariants } from '@/services/productService';
+import { variantLabel } from '@/lib/variants';
 
 const TYPES = [
-  { value: 'TROCA', label: 'Trocar tamanho', hint: 'Mesmo produto, outro tamanho. Não mexe no dinheiro.' },
-  { value: 'DEVOLUCAO', label: 'Devolver o dinheiro', hint: 'Estorna no Mercado Pago o valor das peças.' },
+  {
+    value: 'TROCA',
+    label: 'Trocar tamanho',
+    hint: 'Mesmo produto, outro tamanho. Não mexe no dinheiro.',
+  },
+  {
+    value: 'DEVOLUCAO',
+    label: 'Devolver o dinheiro',
+    hint: 'Estorna no Mercado Pago o valor das peças.',
+  },
 ];
 
 /*
@@ -83,7 +92,8 @@ export default function OrderReturnModal({ orderId, eligibility, onClose, onDone
     setLines((prev) => ({ ...prev, [orderItemId]: { ...prev[orderItemId], ...patch } }));
 
   const selected = items.filter((i) => lines[i.orderItemId] && !lineBlocked(i));
-  const missingNewSize = type === 'TROCA' && selected.some((i) => !lines[i.orderItemId].newVariantId);
+  const missingNewSize =
+    type === 'TROCA' && selected.some((i) => !lines[i.orderItemId].newVariantId);
   const missingReturned = selected.some(
     (i) => i.heldVariants.length > 1 && !lines[i.orderItemId].returnedVariantId,
   );
@@ -153,7 +163,9 @@ export default function OrderReturnModal({ orderId, eligibility, onClose, onDone
                 key={t.value}
                 className={cn(
                   'flex cursor-pointer flex-col gap-0.5 rounded-card border p-3 transition-colors',
-                  type === t.value ? 'border-foreground' : 'border-border hover:border-foreground/30',
+                  type === t.value
+                    ? 'border-foreground'
+                    : 'border-border hover:border-foreground/30',
                   disabled && 'cursor-not-allowed opacity-50',
                 )}
               >
@@ -185,11 +197,12 @@ export default function OrderReturnModal({ orderId, eligibility, onClose, onDone
               const blocked = lineBlocked(item);
               const line = lines[item.orderItemId];
               const checked = Boolean(line) && !blocked;
+              // Sem cor, "Único" não tem troca por tamanho; com cor, dá para trocar de cor.
               const sizeOptions = (variantsByProduct[item.productId] || []).filter(
                 (v) =>
                   v.inStock &&
                   String(v.variantId) !== (line?.returnedVariantId || '') &&
-                  v.size !== 'Único',
+                  (v.size !== 'Único' || Boolean(v.color)),
               );
               return (
                 <li key={item.orderItemId} className="flex flex-col gap-3 py-3">
@@ -257,7 +270,9 @@ export default function OrderReturnModal({ orderId, eligibility, onClose, onDone
                       )}
                       {type === 'TROCA' && (
                         <Select
-                          label="Novo tamanho"
+                          label={
+                            sizeOptions.some((v) => v.color) ? 'Nova cor / tamanho' : 'Novo tamanho'
+                          }
                           value={line.newVariantId}
                           onChange={(e) =>
                             updateLine(item.orderItemId, { newVariantId: e.target.value })
@@ -268,7 +283,7 @@ export default function OrderReturnModal({ orderId, eligibility, onClose, onDone
                           </option>
                           {sizeOptions.map((v) => (
                             <option key={v.variantId} value={v.variantId}>
-                              {v.size} ({v.stock} em estoque)
+                              {variantLabel(v.color, v.size)} ({v.stock} em estoque)
                             </option>
                           ))}
                         </Select>
@@ -343,8 +358,8 @@ export default function OrderReturnModal({ orderId, eligibility, onClose, onDone
           </li>
           {type === 'DEVOLUCAO' && (
             <li className="text-muted">
-              O estorno é o valor das peças, com a parte do cupom descontada. Se todas as peças
-              do pedido voltarem, o frete da compra também é devolvido. Ainda pode ser estornado:{' '}
+              O estorno é o valor das peças, com a parte do cupom descontada. Se todas as peças do
+              pedido voltarem, o frete da compra também é devolvido. Ainda pode ser estornado:{' '}
               {formatCurrency(eligibility.refundableAmount)}.
             </li>
           )}

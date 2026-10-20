@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 vi.mock('@/services/adminService', () => ({
   getVariants: vi.fn(),
@@ -7,6 +7,7 @@ vi.mock('@/services/adminService', () => ({
   deleteVariant: vi.fn(),
   recountStock: vi.fn(),
   registerMovement: vi.fn(),
+  renameColor: vi.fn(),
 }));
 
 import * as adminService from '@/services/adminService';
@@ -59,7 +60,9 @@ describe('ProductVariantsManager', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
 
     await waitFor(() =>
-      expect(adminService.createVariants).toHaveBeenCalledWith(7, [{ size: '38', initialStock: 4 }]),
+      expect(adminService.createVariants).toHaveBeenCalledWith(7, [
+        { size: '38', initialStock: 4 },
+      ]),
     );
   });
 
@@ -134,5 +137,125 @@ describe('ProductVariantsManager', () => {
     expect(
       await screen.findByText('Variante 1 não pode ser removida: existe em pedidos.'),
     ).toBeInTheDocument();
+  });
+
+  describe('cores', () => {
+    const colored = (id, color, size, stock, colorHex = null) => ({
+      ...variant(id, size, stock),
+      color,
+      colorHex,
+    });
+
+    it('produto com cor mostra um bloco por cor, na ordem de criacao', async () => {
+      adminService.getVariants.mockResolvedValue([
+        colored(3, 'Azul', 'P', 1, '#1565C0'),
+        colored(1, 'Verde', 'M', 2),
+        colored(2, 'Verde', 'P', 0),
+      ]);
+      render(<ProductVariantsManager productId={7} />);
+
+      const verde = await screen.findByRole('region', { name: 'Cor Verde' });
+      const azul = screen.getByRole('region', { name: 'Cor Azul' });
+      expect(verde.compareDocumentPosition(azul) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(
+        Array.from(verde.querySelectorAll('li p:first-child')).map((p) =>
+          p.textContent.replace(/\s+/g, ' ').trim(),
+        ),
+      ).toEqual(['Tamanho P Esgotado', 'Tamanho M Baixo · 2']);
+      expect(screen.getByText('Cores, tamanhos e estoque')).toBeInTheDocument();
+    });
+
+    it('adicionar tamanho dentro de uma cor envia a cor', async () => {
+      adminService.getVariants.mockResolvedValue([colored(1, 'Verde', 'M', 2)]);
+      adminService.createVariants.mockResolvedValue([]);
+      render(<ProductVariantsManager productId={7} />);
+
+      fireEvent.change(await screen.findByLabelText('Adicionar tamanho (Verde)'), {
+        target: { value: 'G' },
+      });
+      fireEvent.change(screen.getByLabelText('Estoque inicial (Verde)'), {
+        target: { value: '1' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
+
+      await waitFor(() =>
+        expect(adminService.createVariants).toHaveBeenCalledWith(
+          7,
+          [{ size: 'G', initialStock: 1 }],
+          { color: 'Verde' },
+        ),
+      );
+    });
+
+    it('editar cor chama renameColor com o nome atual e a bolinha', async () => {
+      adminService.getVariants.mockResolvedValue([colored(1, 'Verde', 'M', 2)]);
+      adminService.renameColor.mockResolvedValue([]);
+      render(<ProductVariantsManager productId={7} />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Editar cor Verde' }));
+      fireEvent.change(screen.getByLabelText('Nome da cor'), { target: { value: 'Verde musgo' } });
+      fireEvent.click(screen.getByLabelText('Bolinha de cor'));
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar cor' }));
+
+      await waitFor(() =>
+        expect(adminService.renameColor).toHaveBeenCalledWith(7, {
+          currentName: 'Verde',
+          name: 'Verde musgo',
+          hex: '#1F1F1F',
+        }),
+      );
+    });
+
+    it('produto sem cor: adicionar cor pede a cor atual, nomeia e cria a nova grade', async () => {
+      adminService.getVariants.mockResolvedValue([variant(1, 'M', 2)]);
+      adminService.renameColor.mockResolvedValue([]);
+      adminService.createVariants.mockResolvedValue([]);
+      render(<ProductVariantsManager productId={7} />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Adicionar cor' }));
+      const form = screen.getByRole('form', { name: 'Adicionar cor' });
+      fireEvent.change(within(form).getByLabelText('Cor atual'), { target: { value: 'Azul' } });
+      fireEvent.change(within(form).getByLabelText('Nome da nova cor'), {
+        target: { value: 'Verde' },
+      });
+      fireEvent.click(within(form).getByLabelText('Tamanho P'));
+      fireEvent.change(within(form).getByLabelText('Estoque inicial P'), {
+        target: { value: '3' },
+      });
+      fireEvent.click(within(form).getByRole('button', { name: 'Salvar cor' }));
+
+      await waitFor(() => expect(adminService.createVariants).toHaveBeenCalled());
+      expect(adminService.renameColor).toHaveBeenCalledWith(7, {
+        currentName: '',
+        name: 'Azul',
+        hex: null,
+      });
+      expect(adminService.createVariants).toHaveBeenCalledWith(
+        7,
+        [{ size: 'P', initialStock: 3 }],
+        { color: 'Verde', colorHex: null },
+      );
+      expect(adminService.renameColor.mock.invocationCallOrder[0]).toBeLessThan(
+        adminService.createVariants.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('nova cor sem tamanho marcado nao chama a API', async () => {
+      adminService.getVariants.mockResolvedValue([]);
+      render(<ProductVariantsManager productId={7} />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Adicionar cor' }));
+      const form = screen.getByRole('form', { name: 'Adicionar cor' });
+      fireEvent.change(within(form).getByLabelText('Nome da nova cor'), {
+        target: { value: 'Verde' },
+      });
+      fireEvent.click(within(form).getByRole('button', { name: 'Salvar cor' }));
+
+      expect(
+        await within(form).findByText('Marque ao menos um tamanho da nova cor.'),
+      ).toBeInTheDocument();
+      expect(adminService.createVariants).not.toHaveBeenCalled();
+      expect(within(form).queryByLabelText('Cor atual')).not.toBeInTheDocument();
+    });
   });
 });

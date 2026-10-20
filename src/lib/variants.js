@@ -26,3 +26,43 @@ export function toGridPayload(value) {
     .filter((v) => Number.isInteger(v.initialStock) && v.initialStock >= 0)
     .sort((a, b) => sizeRank(a.size) - sizeRank(b.size));
 }
+
+/** "Verde · M"; só o tamanho sem cor; só a cor quando o tamanho é "Único" (espelha VariantLabels.java). */
+export function variantLabel(color, size) {
+  const c = (color || '').trim();
+  if (!c) return size;
+  if (!size || size === UNICO) return c;
+  return `${c} · ${size}`;
+}
+
+const colorKey = (color) => (color || '').trim().toLowerCase();
+
+/** O produto tem variação por cor? (no backend é tudo ou nada) */
+export function hasColors(variants) {
+  return (variants || []).some((v) => (v.color || '').trim() !== '');
+}
+
+/**
+ * Agrupa variações por cor, na ordem em que as cores foram criadas (menor variantId), e os
+ * tamanhos de cada cor na ordem de exibição. Produto sem cor = um grupo com color ''.
+ * -> [{ color, colorHex, variants: [...] }]
+ */
+export function groupByColor(variants) {
+  const groups = new Map();
+  [...(variants || [])]
+    .sort((a, b) => (a.variantId ?? 0) - (b.variantId ?? 0))
+    .forEach((v) => {
+      const key = colorKey(v.color);
+      if (!groups.has(key))
+        groups.set(key, { color: v.color || '', colorHex: v.colorHex || null, variants: [] });
+      groups.get(key).variants.push(v);
+    });
+  return [...groups.values()].map((g) => ({
+    ...g,
+    variants: g.variants.sort((a, b) => sizeRank(a.size) - sizeRank(b.size)),
+  }));
+}
+
+export function sameColor(a, b) {
+  return colorKey(a) === colorKey(b);
+}

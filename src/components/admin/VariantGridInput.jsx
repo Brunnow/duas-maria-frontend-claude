@@ -9,7 +9,11 @@ import { SIZE_GROUPS, UNICO } from '@/lib/variants';
  * Tamanhos agrupados em letras, numeração (jeans) e "Único". Regra do
  * "Único" (espelha o backend): nunca convive com nenhum outro tamanho.
  */
-export default function VariantGridInput({ value, onChange }) {
+export default function VariantGridInput({
+  value,
+  onChange,
+  legend = 'Tamanhos e estoque (opcional)',
+}) {
   const selected = value || {};
   const sizes = Object.keys(selected);
   const hasUnico = sizes.includes(UNICO);
@@ -29,9 +33,7 @@ export default function VariantGridInput({ value, onChange }) {
 
   return (
     <fieldset>
-      <legend className="text-xs font-medium uppercase tracking-wider text-muted">
-        Tamanhos e estoque (opcional)
-      </legend>
+      <legend className="text-xs font-medium uppercase tracking-wider text-muted">{legend}</legend>
       <p className="mt-1 text-xs text-muted">
         Marque os tamanhos e informe o estoque inicial. Você pode ajustar depois em “Tamanhos e
         estoque”.

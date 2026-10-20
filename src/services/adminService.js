@@ -53,11 +53,22 @@ export function listProductImages(productId) {
   return api.get(`/admin/products/${productId}/images`).then((response) => response.data);
 }
 
-/** POST /api/admin/products/{id}/images (multipart "images", N arquivos, máx. 8/produto) */
-export function uploadProductImages(productId, files) {
+/**
+ * POST /api/admin/products/{id}/images (multipart "images", N arquivos, máx. 8 por cor).
+ * `color` opcional: as fotos já entram marcadas com essa cor do produto.
+ */
+export function uploadProductImages(productId, files, color) {
   const form = new FormData();
   Array.from(files).forEach((file) => form.append('images', file));
+  if (color) form.append('color', color);
   return api.post(`/admin/products/${productId}/images`, form).then((response) => response.data);
+}
+
+/** PUT /api/admin/products/{id}/images/{imageId}/color { color } ("" = vale para todas as cores) */
+export function setProductImageColor(productId, imageId, color) {
+  return api
+    .put(`/admin/products/${productId}/images/${imageId}/color`, { color: color || '' })
+    .then((response) => response.data);
 }
 
 /** DELETE /api/admin/products/{id}/images/{imageId} */
@@ -111,9 +122,23 @@ export function getVariants(productId) {
  * POST /api/admin/products/{productId}/variants { variants: [{ size, initialStock }] }
  * size ∈ PP, P, M, G, GG, Único.
  */
-export function createVariants(productId, variants) {
+export function createVariants(productId, variants, { color, colorHex } = {}) {
+  const body = color ? { variants, color, colorHex: colorHex || null } : { variants };
+  return api.post(`/admin/products/${productId}/variants`, body).then((response) => response.data);
+}
+
+/**
+ * PUT /api/admin/products/{productId}/colors { currentName, name, hex } -> ProductVariantDTO[]
+ * Renomeia uma cor (variações e fotos juntas). currentName "" dá nome à cor de um produto que
+ * ainda não tinha cor. hex null = a loja mostra a foto da cor.
+ */
+export function renameColor(productId, { currentName, name, hex }) {
   return api
-    .post(`/admin/products/${productId}/variants`, { variants })
+    .put(`/admin/products/${productId}/colors`, {
+      currentName: currentName || '',
+      name,
+      hex: hex || null,
+    })
     .then((response) => response.data);
 }
 

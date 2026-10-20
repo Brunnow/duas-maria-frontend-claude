@@ -64,7 +64,11 @@ export default function StockMovementModal({ open, variant, onClose, onSubmit, s
     <Modal
       open={open}
       onClose={handleClose}
-      title={variant ? `Movimentar estoque — Tamanho ${variant.size}` : 'Movimentar estoque'}
+      title={
+        variant
+          ? `Movimentar estoque — ${variant.color ? `${variant.color} · ` : ''}Tamanho ${variant.size}`
+          : 'Movimentar estoque'
+      }
       size="md"
       footer={
         <>
