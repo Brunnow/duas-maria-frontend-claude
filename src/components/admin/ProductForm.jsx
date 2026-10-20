@@ -2,8 +2,11 @@ import { useId, useRef, useState } from 'react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import NewProductColors from '@/components/admin/NewProductColors';
+import PhotoPicker from '@/components/admin/PhotoPicker';
 import VariantGridInput from '@/components/admin/VariantGridInput';
-import { toGridPayload } from '@/lib/variants';
+import { colorFieldsValue, colorPayload } from '@/lib/colors';
+import { sameColor, toGridPayload } from '@/lib/variants';
 import { computeSpecialPrice, formatCurrency, parseDecimal } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { maxLength, minLength, required, validateForm } from '@/lib/validation';
@@ -25,6 +28,30 @@ const baseSchema = {
   ],
 };
 
+let blockSeq = 0;
+const newColorBlock = (grid = {}, files = []) => ({
+  key: `cor-${++blockSeq}`,
+  color: colorFieldsValue(),
+  grid,
+  files,
+});
+
+/** Erros das cores: nome obrigatório e sem repetir, e ao menos um tamanho por cor. */
+function validateColors(blocks) {
+  const errors = {};
+  blocks.forEach((block, index) => {
+    const name = block.color.name.trim();
+    const e = {};
+    if (!name) e.name = 'Informe o nome da cor';
+    else if (blocks.slice(0, index).some((b) => sameColor(b.color.name, name))) {
+      e.name = 'Essa cor já está acima';
+    }
+    if (toGridPayload(block.grid).length === 0) e.grid = 'Marque ao menos um tamanho desta cor.';
+    if (Object.keys(e).length) errors[block.key] = e;
+  });
+  return errors;
+}
+
 function toForm(product) {
   return {
     productName: product?.productName ?? '',
@@ -38,6 +65,10 @@ function toForm(product) {
  * Formulario de produto (criar/editar). Na criacao pede a categoria; na
  * edicao a categoria e opcional ("Manter a categoria atual") e, se escolhida,
  * o produto e movido por um endpoint proprio.
+ *
+ * Na criacao, tudo numa tela so: tamanhos e fotos (produto sem cor) ou um
+ * bloco por cor com tamanhos e fotos. Quem cria tudo em sequencia e a pagina
+ * (AdminProdutos); `progress` mostra a etapa em andamento.
  */
 export default function ProductForm({
   product,
@@ -46,6 +77,7 @@ export default function ProductForm({
   onCancel,
   submitting,
   error,
+  progress,
 }) {
   const formRef = useRef(null);
   const descriptionId = useId();
@@ -53,7 +85,25 @@ export default function ProductForm({
   const [values, setValues] = useState(() => toForm(product));
   const [categoryId, setCategoryId] = useState('');
   const [variants, setVariants] = useState({}); // { [size]: stockString } — só na criação
+  const [photos, setPhotos] = useState([]); // File[] — produto sem cor, só na criação
+  const [mode, setMode] = useState('sizes'); // 'sizes' | 'colors' — só na criação
+  const [colors, setColors] = useState(() => [newColorBlock()]);
+  const [colorErrors, setColorErrors] = useState({});
   const [errors, setErrors] = useState({});
+
+  // Passar para "com cores" leva o que já foi marcado (tamanhos e fotos) para a
+  // primeira cor, se ela ainda estiver vazia — nada do que foi feito se perde.
+  const chooseMode = (next) => {
+    if (next === 'colors' && mode === 'sizes') {
+      const [first, ...rest] = colors;
+      const firstEmpty =
+        !first.color.name.trim() && !Object.keys(first.grid).length && !first.files.length;
+      if (firstEmpty && (Object.keys(variants).length || photos.length)) {
+        setColors([{ ...first, grid: variants, files: photos }, ...rest]);
+      }
+    }
+    setMode(next);
+  };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -73,12 +123,16 @@ export default function ProductForm({
     if (price <= 0) found.price = 'Informe um preço válido';
     if (discount < 0 || discount > 90) found.discount = 'Desconto entre 0 e 90';
     if (!isEdit && !categoryId) found.categoryId = 'Escolha uma categoria';
+    const foundColors = !isEdit && mode === 'colors' ? validateColors(colors) : {};
     setErrors(found);
-    if (Object.keys(found).length > 0) {
+    setColorErrors(foundColors);
+    if (Object.keys(found).length > 0 || Object.keys(foundColors).length > 0) {
       // No celular o botão fica bem abaixo dos campos: leva até o primeiro erro,
       // senão parece que "nada aconteceu".
       requestAnimationFrame(() => {
-        formRef.current?.querySelector('[aria-invalid="true"]')?.focus();
+        const field = formRef.current?.querySelector('[aria-invalid="true"], [role="alert"]');
+        field?.focus?.();
+        field?.scrollIntoView?.({ block: 'center' });
       });
       return;
     }
@@ -93,7 +147,16 @@ export default function ProductForm({
         discount,
         specialPrice,
       },
-      variants: isEdit ? undefined : toGridPayload(variants),
+      variants: isEdit || mode === 'colors' ? undefined : toGridPayload(variants),
+      photos: isEdit || mode === 'colors' ? [] : photos,
+      colors:
+        isEdit || mode !== 'colors'
+          ? []
+          : colors.map((block) => ({
+              ...colorPayload(block.color),
+              grid: toGridPayload(block.grid),
+              files: block.files,
+            })),
     });
   };
 
@@ -188,9 +251,53 @@ export default function ProductForm({
       </p>
 
       {!isEdit && (
-        <div className="sm:col-span-2">
-          <VariantGridInput value={variants} onChange={setVariants} />
-        </div>
+        <fieldset className="flex flex-col gap-4 border-t border-border pt-5 sm:col-span-2">
+          <legend className="sr-only">Variações</legend>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-semibold text-foreground">Variações e fotos</p>
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-foreground">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="variation-mode"
+                  checked={mode === 'sizes'}
+                  onChange={() => chooseMode('sizes')}
+                />
+                Só tamanhos (sem cores)
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="variation-mode"
+                  checked={mode === 'colors'}
+                  onChange={() => chooseMode('colors')}
+                />
+                Com cores
+              </label>
+            </div>
+          </div>
+
+          {mode === 'sizes' ? (
+            <>
+              <VariantGridInput value={variants} onChange={setVariants} />
+              <PhotoPicker files={photos} onChange={setPhotos} />
+            </>
+          ) : (
+            <>
+              <NewProductColors value={colors} onChange={setColors} errors={colorErrors} />
+              <div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setColors((prev) => [...prev, newColorBlock()])}
+                >
+                  + Adicionar outra cor
+                </Button>
+              </div>
+            </>
+          )}
+        </fieldset>
       )}
 
       {error && (
@@ -199,13 +306,18 @@ export default function ProductForm({
         </p>
       )}
 
-      <div className="flex gap-3 sm:col-span-2">
+      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
         <Button type="submit" loading={submitting}>
           {isEdit ? 'Salvar alterações' : 'Criar produto'}
         </Button>
-        <Button type="button" variant="ghost" onClick={onCancel}>
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={submitting}>
           Cancelar
         </Button>
+        {submitting && progress && (
+          <p role="status" aria-live="polite" className="text-sm text-muted">
+            {progress}
+          </p>
+        )}
       </div>
     </form>
   );

@@ -34,6 +34,70 @@ const saveErrText = (err) => {
   return errText(err, 'Não foi possível salvar o produto.');
 };
 
+/**
+ * Cria, em sequência, as variações e as fotos de um produto recém-criado. Cada
+ * etapa que falha é anotada e as outras seguem (uma foto recusada não impede
+ * as demais). As fotos de uma cor só sobem se a cor foi criada (o backend
+ * recusa foto de cor que o produto não tem). Fotos vão uma por vez: a
+ * primeira enviada vira a principal e o andamento fica visível.
+ */
+async function createVariationsAndPhotos(productId, { variants, photos, colors, onProgress }) {
+  const problems = [];
+  let photosSent = 0;
+
+  const sendPhotos = async (files, color) => {
+    for (let i = 0; i < files.length; i += 1) {
+      onProgress(`Enviando foto ${i + 1} de ${files.length}${color ? ` da cor ${color}` : ''}…`);
+      try {
+        if (color) await adminService.uploadProductImages(productId, [files[i]], color);
+        else await adminService.uploadProductImages(productId, [files[i]]);
+        photosSent += 1;
+      } catch (err) {
+        problems.push({
+          step: 'photos',
+          message: `foto ${files[i].name} (${errText(err, 'não enviada')}).`,
+        });
+      }
+    }
+  };
+
+  if (colors?.length > 0) {
+    for (const color of colors) {
+      onProgress(`Criando a cor ${color.name}…`);
+      try {
+        await adminService.createVariants(productId, color.grid, {
+          color: color.name,
+          colorHex: color.hex,
+        });
+      } catch (err) {
+        problems.push({
+          step: 'variants',
+          message: `cor ${color.name} (${errText(err, 'não criada')}).`,
+        });
+        if (color.files.length) {
+          problems.push({ step: 'photos', message: `fotos da cor ${color.name}.` });
+        }
+        continue;
+      }
+      await sendPhotos(color.files, color.name);
+    }
+  } else {
+    if (variants?.length > 0) {
+      onProgress('Criando os tamanhos…');
+      try {
+        await adminService.createVariants(productId, variants);
+      } catch (err) {
+        problems.push({
+          step: 'variants',
+          message: `${errText(err, 'a grade de tamanhos falhou.')} Ajuste em “Tamanhos e estoque”.`,
+        });
+      }
+    }
+    await sendPhotos(photos || []);
+  }
+  return { problems, photosSent };
+}
+
 export default function AdminProdutos() {
   const dispatch = useDispatch();
   const categories = useSelector((state) => state.products.categories) || [];
@@ -58,6 +122,7 @@ export default function AdminProdutos() {
   const [managingImages, setManagingImages] = useState(null); // null | productId
   const [managingVariants, setManagingVariants] = useState(null); // null | productId
   const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState(null); // etapa da criação em andamento
   const [toDelete, setToDelete] = useState(null); // produto aguardando confirmação
   const [notice, setNotice] = useState(null);
   // Erro do salvamento, mostrado junto ao botão do formulário (o `notice` fica
@@ -99,7 +164,7 @@ export default function AdminProdutos() {
     setQuery('');
   };
 
-  const handleSubmit = async ({ categoryId, product, variants }) => {
+  const handleSubmit = async ({ categoryId, product, variants, photos, colors }) => {
     setSaving(true);
     setNotice(null);
     setFormError(null);
@@ -115,27 +180,15 @@ export default function AdminProdutos() {
         setEditing(null);
         refetch();
       } else {
+        setProgress('Criando o produto…');
         const created = await adminService.createProduct(categoryId, product);
-        // Próximo passo natural: as fotos. Abre o painel de imagens do produto novo.
-        setManagingImages(created.productId);
-        if (variants && variants.length > 0) {
-          try {
-            await adminService.createVariants(created.productId, variants);
-            setNotice('Produto e tamanhos criados. Agora adicione as fotos abaixo.');
-          } catch (gridErr) {
-            // Produto já existe; a grade falhou. Estado recuperável: abre o
-            // painel de tamanhos do produto novo para o admin concluir.
-            setNotice(
-              errText(gridErr, 'Produto criado, mas a grade de tamanhos falhou.') +
-                ' Ajuste em “Tamanhos e estoque”.',
-            );
-            setManagingVariants(created.productId);
-          }
-        } else {
-          setNotice(
-            'Produto criado. Adicione as fotos abaixo e defina os tamanhos em “Tamanhos e estoque” para vendê-lo.',
-          );
-        }
+        const result = await createVariationsAndPhotos(created.productId, {
+          variants,
+          photos,
+          colors,
+          onProgress: setProgress,
+        });
+        reportCreation(created.productId, result, { variants, photos, colors });
         setEditing(null);
         refetch();
       }
@@ -143,7 +196,38 @@ export default function AdminProdutos() {
       setFormError(saveErrText(err));
     } finally {
       setSaving(false);
+      setProgress(null);
     }
+  };
+
+  // Depois de criar: diz o que foi feito e, se algo faltou, abre o painel
+  // certo do produto novo (ele já existe — nada se perde) para concluir.
+  const reportCreation = (productId, { problems, photosSent }, { variants, photos, colors }) => {
+    const hadVariations = colors?.length > 0 || variants?.length > 0;
+    const hadPhotos = photos?.length > 0 || colors?.some((c) => c.files.length > 0);
+
+    if (problems.length > 0) {
+      setNotice(`Produto criado, mas faltou: ${problems.map((p) => p.message).join(' ')}`);
+      if (problems.some((p) => p.step === 'variants')) setManagingVariants(productId);
+      if (problems.some((p) => p.step === 'photos')) setManagingImages(productId);
+      return;
+    }
+    if (!hadPhotos) {
+      // Sem fotos escolhidas: o próximo passo natural é o painel de imagens.
+      setManagingImages(productId);
+      setNotice(
+        hadVariations
+          ? 'Produto e tamanhos criados. Agora adicione as fotos abaixo.'
+          : 'Produto criado. Adicione as fotos abaixo e defina os tamanhos em “Tamanhos e estoque” para vendê-lo.',
+      );
+      return;
+    }
+    const colorsText =
+      colors?.length > 0 ? ` com ${colors.length} ${colors.length === 1 ? 'cor' : 'cores'}` : '';
+    setNotice(
+      `Produto criado${colorsText} e ${photosSent} ${photosSent === 1 ? 'foto enviada' : 'fotos enviadas'}.` +
+        (hadVariations ? '' : ' Defina os tamanhos em “Tamanhos e estoque” para vendê-lo.'),
+    );
   };
 
   // Erros sobem para o ConfirmDialog, que os mostra dentro do próprio diálogo.
@@ -200,6 +284,7 @@ export default function AdminProdutos() {
             product={editingProduct}
             categories={categories}
             submitting={saving}
+            progress={progress}
             error={formError}
             onSubmit={handleSubmit}
             onCancel={() => {

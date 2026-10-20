@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { adminAuth, renderWithProviders } from '@/test/renderWithProviders';
 
 vi.mock('@/store/actions', () => ({
@@ -13,6 +13,7 @@ vi.mock('@/services/adminService', () => ({
   changeProductCategory: vi.fn(),
   deleteProduct: vi.fn(),
   uploadProductImage: vi.fn(),
+  uploadProductImages: vi.fn(),
   listProductImages: vi.fn().mockResolvedValue([]),
   getVariants: vi.fn().mockResolvedValue([]),
   createVariants: vi.fn(),
@@ -433,5 +434,171 @@ describe('AdminProdutos', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Editar Saia Longa' }));
     expect(screen.getByLabelText('Nome')).toHaveValue('Saia Longa');
     expect(screen.getByLabelText('Descrição')).toHaveValue('Descrição da saia');
+  });
+
+  describe('criação numa tela só (tamanhos, cores e fotos)', () => {
+    const photo = (name) => new File(['x'], name, { type: 'image/jpeg' });
+
+    async function openNewProduct() {
+      adminService.listProducts.mockResolvedValue({ content: [], totalPages: 0 });
+      adminService.createProduct.mockResolvedValue({ productId: 42 });
+      adminService.createVariants.mockResolvedValue([]);
+      adminService.uploadProductImages.mockResolvedValue([]);
+      renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+      await screen.findByText('Nenhum produto');
+      fireEvent.click(screen.getByRole('button', { name: 'Novo produto' }));
+      fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Vestido Midi' } });
+      fireEvent.change(screen.getByLabelText('Descrição'), { target: { value: 'Vestido midi' } });
+      fireEvent.change(screen.getByLabelText('Preço (R$)'), { target: { value: '199.9' } });
+      fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: '7' } });
+    }
+
+    const pick = (container, label, files) =>
+      fireEvent.change(within(container).getByLabelText(label), { target: { files } });
+
+    it('sem cores: cria os tamanhos e envia as fotos escolhidas, uma por vez', async () => {
+      await openNewProduct();
+      fireEvent.click(screen.getByLabelText('Tamanho P'));
+      pick(document.body, 'Fotos', [photo('a.jpg'), photo('b.jpg')]);
+      fireEvent.click(screen.getByRole('button', { name: 'Criar produto' }));
+
+      await waitFor(() => expect(adminService.uploadProductImages).toHaveBeenCalledTimes(2));
+      expect(adminService.createVariants).toHaveBeenCalledWith(42, [
+        { size: 'P', initialStock: 0 },
+      ]);
+      expect(adminService.uploadProductImages.mock.calls[0][1][0].name).toBe('a.jpg');
+      expect(adminService.uploadProductImages.mock.calls[0]).toHaveLength(2); // sem cor
+      expect(await screen.findByText('Produto criado e 2 fotos enviadas.')).toBeInTheDocument();
+    });
+
+    it('com cores: cria cada cor com seus tamanhos e as fotos já na cor certa', async () => {
+      await openNewProduct();
+      fireEvent.click(screen.getByLabelText('Com cores'));
+      const cor1 = screen.getByRole('region', { name: 'Cor 1' });
+      fireEvent.change(within(cor1).getByLabelText('Nome da cor'), { target: { value: 'Verde' } });
+      fireEvent.click(within(cor1).getByLabelText('Bolinha de cor'));
+      fireEvent.click(within(cor1).getByLabelText('Tamanho P'));
+      fireEvent.change(within(cor1).getByLabelText('Estoque inicial P'), {
+        target: { value: '2' },
+      });
+      pick(cor1, 'Fotos desta cor', [photo('verde.jpg')]);
+
+      fireEvent.click(screen.getByRole('button', { name: '+ Adicionar outra cor' }));
+      const cor2 = screen.getByRole('region', { name: 'Cor 2' });
+      fireEvent.change(within(cor2).getByLabelText('Nome da cor'), {
+        target: { value: 'Floral azul' },
+      });
+      fireEvent.click(within(cor2).getByLabelText('Tamanho M'));
+      pick(cor2, 'Fotos desta cor', [photo('floral1.jpg'), photo('floral2.jpg')]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Criar produto' }));
+
+      await waitFor(() => expect(adminService.uploadProductImages).toHaveBeenCalledTimes(3));
+      expect(adminService.createVariants.mock.calls).toEqual([
+        [42, [{ size: 'P', initialStock: 2 }], { color: 'Verde', colorHex: '#1F1F1F' }],
+        [42, [{ size: 'M', initialStock: 0 }], { color: 'Floral azul', colorHex: null }],
+      ]);
+      expect(adminService.uploadProductImages.mock.calls.map((c) => [c[1][0].name, c[2]])).toEqual([
+        ['verde.jpg', 'Verde'],
+        ['floral1.jpg', 'Floral azul'],
+        ['floral2.jpg', 'Floral azul'],
+      ]);
+      // a cor só é criada antes das fotos dela (o backend recusa foto de cor inexistente)
+      expect(adminService.createVariants.mock.invocationCallOrder[1]).toBeLessThan(
+        adminService.uploadProductImages.mock.invocationCallOrder[1],
+      );
+      expect(
+        await screen.findByText('Produto criado com 2 cores e 3 fotos enviadas.'),
+      ).toBeInTheDocument();
+    });
+
+    it('cor sem nome, repetida ou sem tamanho não chama a API', async () => {
+      await openNewProduct();
+      fireEvent.click(screen.getByLabelText('Com cores'));
+      fireEvent.click(screen.getByRole('button', { name: '+ Adicionar outra cor' }));
+      const cor1 = screen.getByRole('region', { name: 'Cor 1' });
+      const cor2 = screen.getByRole('region', { name: 'Cor 2' });
+      fireEvent.change(within(cor1).getByLabelText('Nome da cor'), { target: { value: 'Verde' } });
+      fireEvent.click(within(cor1).getByLabelText('Tamanho P'));
+      fireEvent.change(within(cor2).getByLabelText('Nome da cor'), { target: { value: 'verde' } });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Criar produto' }));
+
+      expect(await within(cor2).findByText('Essa cor já está acima')).toBeInTheDocument();
+      expect(within(cor2).getByText('Marque ao menos um tamanho desta cor.')).toBeInTheDocument();
+      expect(adminService.createProduct).not.toHaveBeenCalled();
+    });
+
+    it('remover uma cor antes de salvar tira ela do envio', async () => {
+      await openNewProduct();
+      fireEvent.click(screen.getByLabelText('Com cores'));
+      fireEvent.click(screen.getByRole('button', { name: '+ Adicionar outra cor' }));
+      const cor1 = screen.getByRole('region', { name: 'Cor 1' });
+      fireEvent.change(within(cor1).getByLabelText('Nome da cor'), { target: { value: 'Verde' } });
+      fireEvent.click(within(cor1).getByLabelText('Tamanho P'));
+      fireEvent.click(screen.getByRole('button', { name: 'Remover a cor 2' }));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Criar produto' }));
+
+      await waitFor(() => expect(adminService.createVariants).toHaveBeenCalledTimes(1));
+      expect(adminService.createVariants.mock.calls[0][2]).toEqual({
+        color: 'Verde',
+        colorHex: null,
+      });
+    });
+
+    it('se uma cor falhar, segue com as outras, não envia as fotos dela e abre o painel de cores', async () => {
+      await openNewProduct();
+      adminService.createVariants
+        .mockRejectedValueOnce({ response: { data: { message: 'Tamanho inválido' } } })
+        .mockResolvedValueOnce([]);
+      fireEvent.click(screen.getByLabelText('Com cores'));
+      fireEvent.click(screen.getByRole('button', { name: '+ Adicionar outra cor' }));
+      const cor1 = screen.getByRole('region', { name: 'Cor 1' });
+      const cor2 = screen.getByRole('region', { name: 'Cor 2' });
+      fireEvent.change(within(cor1).getByLabelText('Nome da cor'), { target: { value: 'Verde' } });
+      fireEvent.click(within(cor1).getByLabelText('Tamanho P'));
+      pick(cor1, 'Fotos desta cor', [photo('verde.jpg')]);
+      fireEvent.change(within(cor2).getByLabelText('Nome da cor'), { target: { value: 'Azul' } });
+      fireEvent.click(within(cor2).getByLabelText('Tamanho M'));
+      pick(cor2, 'Fotos desta cor', [photo('azul.jpg')]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Criar produto' }));
+
+      expect(
+        await screen.findByText(/Produto criado, mas faltou: cor Verde \(Tamanho inválido\)/),
+      ).toBeInTheDocument();
+      expect(adminService.uploadProductImages).toHaveBeenCalledTimes(1);
+      expect(adminService.uploadProductImages.mock.calls[0][2]).toBe('Azul');
+      // painel de cores/tamanhos do produto novo aberto para concluir
+      expect(
+        await screen.findByRole('heading', { name: /tamanhos e estoque/i }),
+      ).toBeInTheDocument();
+    });
+
+    it('passar para "com cores" leva os tamanhos e as fotos já marcados para a primeira cor', async () => {
+      await openNewProduct();
+      fireEvent.click(screen.getByLabelText('Tamanho G'));
+      pick(document.body, 'Fotos', [photo('a.jpg')]);
+      fireEvent.click(screen.getByLabelText('Com cores'));
+
+      const cor1 = screen.getByRole('region', { name: 'Cor 1' });
+      expect(within(cor1).getByLabelText('Tamanho G')).toBeChecked();
+      expect(
+        within(cor1).getByText('1/8 · até 5 MB cada · sobem ao criar o produto'),
+      ).toBeInTheDocument();
+    });
+
+    it('recusa foto acima de 5 MB antes de enviar', async () => {
+      await openNewProduct();
+      const big = new File(['x'], 'grande.jpg', { type: 'image/jpeg' });
+      Object.defineProperty(big, 'size', { value: 6 * 1024 * 1024 });
+      pick(document.body, 'Fotos', [big]);
+
+      expect(await screen.findByText('grande.jpg: acima de 5 MB.')).toBeInTheDocument();
+      expect(
+        screen.getByText('0/8 · até 5 MB cada · sobem ao criar o produto'),
+      ).toBeInTheDocument();
+    });
   });
 });
