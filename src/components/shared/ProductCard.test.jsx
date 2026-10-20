@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ProductCard from './ProductCard';
 
@@ -54,7 +54,7 @@ describe('ProductCard', () => {
     expect(norm(screen.getByText(/sem juros/).textContent)).toBe('ou 6x de R$ 49,98 sem juros');
   });
 
-  it('com mais de uma cor mostra as bolinhas, cada uma levando a cor pela URL', () => {
+  it('a bolinha troca a foto do card e os links passam a abrir o produto nessa cor', () => {
     renderCard({
       colors: [
         { name: 'Verde', hex: '#2E7D32', image: null, inStock: true },
@@ -63,13 +63,43 @@ describe('ProductCard', () => {
     });
 
     expect(screen.getByRole('list', { name: '2 cores' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Ver na cor Verde' })).toHaveAttribute(
+    fireEvent.click(screen.getByRole('button', { name: 'Cor Floral azul (esgotada)' }));
+
+    expect(screen.getByRole('button', { name: 'Cor Floral azul (esgotada)' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByAltText('Vestido Midi Linho').getAttribute('src')).toContain('floral');
+    expect(
+      screen.getByRole('link', { name: 'Ver Vestido Midi Linho na cor Floral azul' }),
+    ).toHaveAttribute('href', '/produtos/1?cor=Floral%20azul');
+    expect(screen.getByRole('link', { name: /Ver produto/ })).toHaveAttribute(
+      'href',
+      '/produtos/1?cor=Floral%20azul',
+    );
+  });
+
+  it('cor so com bolinha mantem a foto principal; tocar de novo desmarca', () => {
+    renderCard({
+      colors: [
+        { name: 'Verde', hex: '#2E7D32', image: null, inStock: true },
+        { name: 'Azul', hex: '#1565C0', image: null, inStock: true },
+      ],
+    });
+
+    const verde = screen.getByRole('button', { name: 'Cor Verde' });
+    fireEvent.click(verde);
+    expect(screen.getByAltText('Vestido Midi Linho').getAttribute('src')).toContain('vestido');
+    expect(screen.getByRole('link', { name: /Ver produto/ })).toHaveAttribute(
       'href',
       '/produtos/1?cor=Verde',
     );
-    expect(screen.getByRole('link', { name: 'Ver na cor Floral azul (esgotada)' })).toHaveAttribute(
+
+    fireEvent.click(verde);
+    expect(verde).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('link', { name: /Ver produto/ })).toHaveAttribute(
       'href',
-      '/produtos/1?cor=Floral%20azul',
+      '/produtos/1',
     );
   });
 
@@ -86,7 +116,7 @@ describe('ProductCard', () => {
       inStock: true,
     }));
     renderCard({ colors });
-    expect(screen.getAllByRole('link', { name: /^Ver na cor/ })).toHaveLength(5);
+    expect(screen.getAllByRole('button', { name: /^Cor / })).toHaveLength(5);
     expect(screen.getByText('+2')).toBeInTheDocument();
   });
 });

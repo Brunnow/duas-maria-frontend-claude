@@ -8,6 +8,7 @@ vi.mock('@/services/adminService', () => ({
   recountStock: vi.fn(),
   registerMovement: vi.fn(),
   renameColor: vi.fn(),
+  deleteColor: vi.fn(),
 }));
 
 import * as adminService from '@/services/adminService';
@@ -256,6 +257,46 @@ describe('ProductVariantsManager', () => {
       ).toBeInTheDocument();
       expect(adminService.createVariants).not.toHaveBeenCalled();
       expect(within(form).queryByLabelText('Cor atual')).not.toBeInTheDocument();
+    });
+
+    it('excluir cor pede confirmacao (com tamanhos e estoque) e avisa quem esta em volta', async () => {
+      adminService.getVariants
+        .mockResolvedValueOnce([colored(1, 'Verde', 'P', 2), colored(2, 'Azul', 'M', 0)])
+        .mockResolvedValueOnce([colored(2, 'Azul', 'M', 0)]);
+      adminService.deleteColor.mockResolvedValue([]);
+      const onChanged = vi.fn();
+      render(<ProductVariantsManager productId={7} onChanged={onChanged} />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Excluir cor Verde' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText(/tamanhos P \(2 peças em estoque\)/)).toBeInTheDocument();
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Excluir cor' }));
+
+      await waitFor(() => expect(adminService.deleteColor).toHaveBeenCalledWith(7, 'Verde'));
+      await waitFor(() =>
+        expect(screen.queryByRole('region', { name: 'Cor Verde' })).not.toBeInTheDocument(),
+      );
+      expect(onChanged).toHaveBeenCalled();
+    });
+
+    it('excluir cor com tamanho vendido mostra o motivo no dialogo', async () => {
+      adminService.getVariants.mockResolvedValue([colored(1, 'Verde', 'P', 0)]);
+      adminService.deleteColor.mockRejectedValue({
+        response: {
+          data: {
+            message: 'A cor Verde não pode ser excluída: o(s) tamanho(s) P já foram vendidos.',
+          },
+        },
+      });
+      render(<ProductVariantsManager productId={7} />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Excluir cor Verde' }));
+      const dialog = await screen.findByRole('dialog');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Excluir cor' }));
+
+      expect(await within(dialog).findByText(/já foram vendidos/)).toBeInTheDocument();
+      // a cor continua lá (atrás do diálogo, por isso hidden: true)
+      expect(screen.getByRole('region', { name: 'Cor Verde', hidden: true })).toBeInTheDocument();
     });
   });
 });

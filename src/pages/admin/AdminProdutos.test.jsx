@@ -601,4 +601,20 @@ describe('AdminProdutos', () => {
       ).toBeInTheDocument();
     });
   });
+
+  it('o lapis abre a edicao numa tela so: dados, cores/tamanhos e fotos', async () => {
+    adminService.listProducts.mockResolvedValue(PAGE);
+    adminService.getVariants.mockResolvedValue([
+      { variantId: 1, productId: 1, size: 'M', sku: 'X', stock: 2, color: 'Verde', colorHex: null },
+    ]);
+    adminService.listProductImages.mockResolvedValue([]);
+    renderWithProviders(<AdminProdutos />, { preloadedState: preloaded });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar Vestido Midi' }));
+
+    expect(screen.getByRole('button', { name: 'Salvar alterações' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Cor Verde' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Imagens do produto' })).toBeInTheDocument();
+    expect(screen.getByText(/salvos na hora/)).toBeInTheDocument();
+  });
 });

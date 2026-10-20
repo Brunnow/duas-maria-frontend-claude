@@ -74,12 +74,19 @@ describe('AnnouncementBar', () => {
 
     expect(screen.getByText('Tarja de ontem')).toBeInTheDocument();
 
-    resolve({ announcementEnabled: true, announcementText: 'Tarja de hoje', announcementCouponCode: null });
-    expect(await screen.findByText('Tarja de hoje')).toBeInTheDocument();
-    expect(JSON.parse(window.localStorage.getItem('dm-announcement'))).toEqual({
-      text: 'Tarja de hoje',
-      code: null,
+    resolve({
+      announcementEnabled: true,
+      announcementText: 'Tarja de hoje',
+      announcementCouponCode: null,
     });
+    expect(await screen.findByText('Tarja de hoje')).toBeInTheDocument();
+    // A gravação acontece no efeito, logo depois de pintar: espera por ela.
+    await waitFor(() =>
+      expect(JSON.parse(window.localStorage.getItem('dm-announcement'))).toEqual({
+        text: 'Tarja de hoje',
+        code: null,
+      }),
+    );
   });
 
   it('visita seguinte com a tarja desligada: nao reserva espaco', () => {

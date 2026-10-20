@@ -123,6 +123,8 @@ export default function AdminProdutos() {
   const [managingVariants, setManagingVariants] = useState(null); // null | productId
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(null); // etapa da criação em andamento
+  // Na edição, o painel de fotos recarrega quando as cores mudam (cor nova, excluída…).
+  const [colorsVersion, setColorsVersion] = useState(0);
   const [toDelete, setToDelete] = useState(null); // produto aguardando confirmação
   const [notice, setNotice] = useState(null);
   // Erro do salvamento, mostrado junto ao botão do formulário (o `notice` fica
@@ -290,8 +292,36 @@ export default function AdminProdutos() {
             onCancel={() => {
               setFormError(null);
               setEditing(null);
+              refetch(); // cores/fotos mexidas na edição mudam a lista
             }}
           />
+
+          {editingProduct && (
+            // Edição numa tela só: dados acima; cores, tamanhos, estoque e fotos
+            // abaixo, com os mesmos painéis da etiqueta e do ícone de imagens.
+            <div className="mt-6 flex flex-col gap-5 border-t border-border pt-6">
+              <p className="text-xs text-muted">
+                Cores, tamanhos, estoque e fotos são salvos na hora — não dependem do “Salvar
+                alterações”.
+              </p>
+              <ProductVariantsManager
+                key={`edit-variants-${editingProduct.productId}`}
+                productId={editingProduct.productId}
+                productColors={
+                  list.find((p) => p.productId === editingProduct.productId)?.colors ??
+                  editingProduct.colors
+                }
+                onChanged={() => {
+                  setColorsVersion((v) => v + 1);
+                  refetch();
+                }}
+              />
+              <ProductImagesManager
+                key={`edit-images-${editingProduct.productId}-${colorsVersion}`}
+                productId={editingProduct.productId}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -423,6 +453,10 @@ export default function AdminProdutos() {
                     size="sm"
                     onClick={() => {
                       setFormError(null);
+                      // A edição já traz cores, tamanhos e fotos: fecha os painéis
+                      // avulsos para não ter o mesmo painel duas vezes na tela.
+                      setManagingImages(null);
+                      setManagingVariants(null);
                       setEditing(product);
                     }}
                     aria-label={`Editar ${product.productName}`}

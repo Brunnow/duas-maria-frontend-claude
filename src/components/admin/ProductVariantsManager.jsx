@@ -3,6 +3,7 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import Skeleton from '@/components/ui/Skeleton';
 import ColorSwatch from '@/components/shared/ColorSwatch';
 import ColorFields from '@/components/admin/ColorFields';
@@ -39,12 +40,13 @@ const bySize = (list) => [...list].sort((a, b) => sizeRank(a.size) - sizeRank(b.
  * Produto sem cor: lista de tamanhos, como sempre. Com cor: um bloco por cor
  * (bolinha/miniatura, nome, "Editar cor" e os tamanhos daquela cor).
  * `productColors` (opcional, da listagem) só serve para mostrar a miniatura
- * da foto das cores sem bolinha.
+ * da foto das cores sem bolinha. `onChanged` avisa quem está em volta (ex.:
+ * o painel de fotos) que as cores mudaram.
  *
  * NÃO calcula estoque: toda operação chama os endpoints existentes, que
  * escrevem via StockService.
  */
-export default function ProductVariantsManager({ productId, productColors, onClose }) {
+export default function ProductVariantsManager({ productId, productColors, onClose, onChanged }) {
   const [variants, setVariants] = useState(null); // null = carregando
   const [busy, setBusy] = useState(null); // 'add' | 'color' | variantId
   const [error, setError] = useState(null);
@@ -54,6 +56,7 @@ export default function ProductVariantsManager({ productId, productColors, onClo
   const [movementFor, setMovementFor] = useState(null); // variant object
   const [editingColor, setEditingColor] = useState(null); // nome da cor em edição
   const [addingColor, setAddingColor] = useState(false);
+  const [deletingColor, setDeletingColor] = useState(null); // grupo aguardando confirmação
 
   const load = () =>
     adminService
@@ -84,6 +87,7 @@ export default function ProductVariantsManager({ productId, productColors, onClo
     try {
       await fn();
       await load();
+      onChanged?.();
       return true;
     } catch (err) {
       setError(errText(err, 'Não foi possível concluir a operação.'));
@@ -246,14 +250,25 @@ export default function ProductVariantsManager({ productId, productColors, onClo
                     {group.color}
                   </p>
                   {editingColor !== group.color && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingColor(group.color)}
-                      aria-label={`Editar cor ${group.color}`}
-                    >
-                      Editar cor
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingColor(group.color)}
+                        aria-label={`Editar cor ${group.color}`}
+                      >
+                        Editar cor
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeletingColor(group)}
+                        aria-label={`Excluir cor ${group.color}`}
+                        className="text-danger hover:text-danger"
+                      >
+                        Excluir cor
+                      </Button>
+                    </div>
                   )}
                 </div>
 
@@ -342,6 +357,21 @@ export default function ProductVariantsManager({ productId, productColors, onClo
           ))}
       </div>
 
+      <ConfirmDialog
+        open={deletingColor != null}
+        title={deletingColor ? `Excluir a cor ${deletingColor.color}?` : ''}
+        description={deletingColor ? deleteColorText(deletingColor) : ''}
+        confirmLabel="Excluir cor"
+        errorFallback="Não foi possível excluir a cor."
+        onClose={() => setDeletingColor(null)}
+        onConfirm={async () => {
+          // Erro sobe para o diálogo, que mostra a mensagem do backend (ex.: tamanho vendido).
+          await adminService.deleteColor(productId, deletingColor.color);
+          await load();
+          onChanged?.();
+        }}
+      />
+
       <StockMovementModal
         open={movementFor != null}
         variant={movementFor}
@@ -350,6 +380,16 @@ export default function ProductVariantsManager({ productId, productColors, onClo
         onSubmit={submitMovement}
       />
     </div>
+  );
+}
+
+function deleteColorText(group) {
+  const sizes = group.variants.map((v) => v.size).join(', ');
+  const stock = group.variants.reduce((sum, v) => sum + (v.stock ?? 0), 0);
+  return (
+    `Saem da loja os tamanhos ${sizes}` +
+    (stock > 0 ? ` (${stock} ${stock === 1 ? 'peça' : 'peças'} em estoque)` : '') +
+    ' e as fotos desta cor. Não dá para desfazer.'
   );
 }
 

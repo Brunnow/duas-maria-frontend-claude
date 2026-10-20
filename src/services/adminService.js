@@ -142,6 +142,16 @@ export function renameColor(productId, { currentName, name, hex }) {
     .then((response) => response.data);
 }
 
+/**
+ * DELETE /api/admin/products/{productId}/colors?name= -> ProductVariantDTO[] (as que sobraram)
+ * Exclui a cor inteira (tamanhos, mesmo com estoque, e fotos). 409 se algum tamanho foi vendido.
+ */
+export function deleteColor(productId, name) {
+  return api
+    .delete(`/admin/products/${productId}/colors`, { params: { name } })
+    .then((response) => response.data);
+}
+
 /** DELETE /api/admin/products/{productId}/variants/{variantId} (estoque deve ser 0) */
 export function deleteVariant(productId, variantId) {
   return api
