@@ -8,6 +8,7 @@ import { discountPercent, formatCurrency } from '@/lib/format';
 import { INTEREST_FREE_INSTALLMENTS, installmentValue } from '@/lib/installments';
 import { isOnSale } from '@/lib/returnPolicy';
 import OptimizedImage from '@/components/shared/OptimizedImage';
+import ColorSwatch from '@/components/shared/ColorSwatch';
 
 /**
  * Card de produto — orientado a imagem. A imagem e o nome levam a pagina
@@ -21,6 +22,7 @@ export default function ProductCard({
   quantity,
   price,
   specialPrice,
+  colors,
 }) {
   const inStock = Number(quantity) > 0;
   const pct = discountPercent(price, specialPrice);
@@ -68,6 +70,8 @@ export default function ProductCard({
           </Link>
         </h3>
 
+        {colors?.length > 1 && <CardColors href={href} colors={colors} />}
+
         <div>
           <Price price={price} specialPrice={specialPrice} className="text-sm" />
           {installment != null && (
@@ -85,5 +89,37 @@ export default function ProductCard({
         </div>
       </div>
     </div>
+  );
+}
+
+const MAX_CARD_COLORS = 5;
+
+/** Bolinhas/miniaturas das cores; cada uma abre o produto já naquela cor. */
+function CardColors({ href, colors }) {
+  const shown = colors.slice(0, MAX_CARD_COLORS);
+  const extra = colors.length - shown.length;
+  return (
+    <ul className="flex flex-wrap items-center gap-1.5" aria-label={`${colors.length} cores`}>
+      {shown.map((c) => (
+        <li key={c.name}>
+          <Link
+            to={`${href}?cor=${encodeURIComponent(c.name)}`}
+            aria-label={c.inStock ? `Ver na cor ${c.name}` : `Ver na cor ${c.name} (esgotada)`}
+            title={c.name}
+            className="block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          >
+            <ColorSwatch
+              name={c.name}
+              hex={c.hex}
+              image={c.image}
+              size="md"
+              soldOut={!c.inStock}
+              className="h-6 w-6"
+            />
+          </Link>
+        </li>
+      ))}
+      {extra > 0 && <li className="text-xs text-muted">+{extra}</li>}
+    </ul>
   );
 }

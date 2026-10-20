@@ -101,6 +101,7 @@ export default function PedidoDetalhe() {
                       {item.product?.productName || 'Produto'}
                     </p>
                     <p className="text-xs text-muted">
+                      {item.color && <>Cor {item.color} · </>}
                       {item.size && <>Tamanho {item.size} · </>}
                       Qtd. {item.quantity} · {formatCurrency(item.orderedProductPrice)} cada
                     </p>

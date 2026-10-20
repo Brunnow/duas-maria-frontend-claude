@@ -27,7 +27,7 @@ export default function CartLineItem({ item, cartId, compact = false }) {
     }
   };
 
-  const href = `/produtos/${item.productId}`;
+  const href = `/produtos/${item.productId}${item.color ? `?cor=${encodeURIComponent(item.color)}` : ''}`;
 
   return (
     <div className="flex gap-3 py-4 sm:gap-4">
@@ -60,13 +60,15 @@ export default function CartLineItem({ item, cartId, compact = false }) {
             >
               {item.productName}
             </Link>
-            <p className="mt-0.5 text-xs text-muted">Tamanho: {item.size}</p>
+            <p className="mt-0.5 text-xs text-muted">
+              {item.color && <>Cor: {item.color} · </>}Tamanho: {item.size}
+            </p>
           </div>
           <button
             type="button"
             onClick={() => run(removeItem, { cartId, variantId: item.variantId })}
             disabled={busy}
-            aria-label={`Remover ${item.productName} tamanho ${item.size}`}
+            aria-label={`Remover ${item.productName} ${item.color ? `cor ${item.color} ` : ''}tamanho ${item.size}`}
             className="rounded-control p-1 text-muted transition-colors hover:bg-subtle hover:text-danger disabled:opacity-40"
           >
             <FiTrash2 size={16} />

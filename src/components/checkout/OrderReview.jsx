@@ -33,7 +33,7 @@ export default function OrderReview({ items, address, shipping, coupons = [] }) 
               <div className="min-w-0 flex-1">
                 <p className="truncate text-foreground">{item.productName}</p>
                 <p className="text-xs text-muted">
-                  Tam. {item.size} · {item.quantity}x
+                  {item.color && <>{item.color} · </>}Tam. {item.size} · {item.quantity}x
                 </p>
               </div>
               <span className="text-foreground">{formatCurrency(item.lineTotal)}</span>

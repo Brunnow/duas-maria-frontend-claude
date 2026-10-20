@@ -14,6 +14,7 @@ import { fetchAddresses, selectAddresses } from '@/features/address/addressSlice
 import { createOrder, startMercadoPagoPayment } from '@/services/orderService';
 import { getShippingOptions } from '@/services/shippingService';
 import { goToExternal } from '@/lib/navigate';
+import { variantLabel } from '@/lib/variants';
 
 const STEPS = ['Endereço', 'Frete', 'Revisão'];
 
@@ -207,8 +208,8 @@ export default function Checkout() {
           <ul className="mt-2 list-disc pl-5 text-muted">
             {shortage.map((item) => (
               <li key={item.variantId}>
-                {item.productName} ({item.size}) — pedido {item.requested}, disponível{' '}
-                {item.available}
+                {item.productName} ({variantLabel(item.color, item.size)}) — pedido {item.requested}
+                , disponível {item.available}
               </li>
             ))}
           </ul>

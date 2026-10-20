@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { anonymousAuth, authenticatedAuth, makeStore } from '@/test/renderWithProviders';
@@ -50,11 +50,11 @@ const cartDto = {
   ],
 };
 
-function renderAt(id, { auth = authenticatedAuth } = {}) {
+function renderAt(id, { auth = authenticatedAuth, query = '' } = {}) {
   const store = makeStore(auth);
   render(
     <Provider store={store}>
-      <MemoryRouter initialEntries={[`/produtos/${id}`]}>
+      <MemoryRouter initialEntries={[`/produtos/${id}${query}`]}>
         <Routes>
           <Route path="/produtos/:id" element={<Produto />} />
           <Route path="/login" element={<div>Tela de login</div>} />
@@ -208,5 +208,91 @@ describe('Produto (PDP)', () => {
     (await screen.findByRole('button', { name: 'Adicionar ao carrinho' })).click();
 
     expect(await screen.findByText('Tela de login')).toBeInTheDocument();
+  });
+
+  describe('cores', () => {
+    const colorProduct = {
+      ...product,
+      images: [
+        { imageId: 1, url: 'http://x/verde.jpg', primary: true, color: 'Verde' },
+        { imageId: 2, url: 'http://x/azul.jpg', primary: false, color: 'Azul' },
+        { imageId: 3, url: 'http://x/etiqueta.jpg', primary: false, color: null },
+      ],
+      colors: [
+        { name: 'Verde', hex: '#2E7D32', image: 'http://x/verde.jpg', inStock: false },
+        { name: 'Azul', hex: null, image: 'http://x/azul.jpg', inStock: true },
+      ],
+    };
+    const colorVariants = [
+      { variantId: 1, size: 'P', stock: 0, inStock: false, color: 'Verde' },
+      { variantId: 2, size: 'M', stock: 0, inStock: false, color: 'Verde' },
+      { variantId: 3, size: 'G', stock: 2, inStock: true, color: 'Azul' },
+    ];
+    const sizes = () => screen.getAllByRole('radio').map((r) => r.closest('label').textContent);
+    const galleryThumbs = () => screen.queryAllByRole('button', { name: /Ver imagem/ }).length;
+
+    it('abre na primeira cor com estoque e mostra so os tamanhos e fotos dela', async () => {
+      getProduct.mockResolvedValue(colorProduct);
+      getProductVariants.mockResolvedValue(colorVariants);
+
+      renderAt(7);
+
+      expect(await screen.findByRole('button', { name: 'Cor Azul' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      expect(screen.getByRole('button', { name: 'Cor Verde (esgotada)' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+      expect(sizes()).toEqual(['G']);
+      expect(galleryThumbs()).toBe(2); // foto azul + a que vale para todas
+    });
+
+    it('trocar de cor troca os tamanhos e avisa quando a cor esta esgotada', async () => {
+      getProduct.mockResolvedValue(colorProduct);
+      getProductVariants.mockResolvedValue(colorVariants);
+
+      renderAt(7);
+      fireEvent.click(await screen.findByRole('button', { name: 'Cor Verde (esgotada)' }));
+
+      expect(sizes()).toEqual(['P', 'M']);
+      expect(screen.getByText('Verde esgotada. Veja as outras cores.')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Selecione um tamanho' })).toBeDisabled();
+    });
+
+    it('respeita a cor da URL (?cor=) e adiciona a variacao certa', async () => {
+      getProduct.mockResolvedValue({
+        ...colorProduct,
+        colors: colorProduct.colors.map((c) => ({ ...c, inStock: true })),
+      });
+      getProductVariants.mockResolvedValue([
+        { variantId: 1, size: 'P', stock: 1, inStock: true, color: 'Verde' },
+        { variantId: 3, size: 'P', stock: 2, inStock: true, color: 'Azul' },
+      ]);
+      addVariantToCart.mockResolvedValue({ cartId: 1, totalPrice: 0, items: [] });
+
+      renderAt(7, { query: '?cor=verde' });
+
+      expect(await screen.findByRole('button', { name: 'Cor Verde' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      fireEvent.click(screen.getByRole('radio', { name: 'P' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Adicionar ao carrinho' }));
+
+      await waitFor(() => expect(addVariantToCart).toHaveBeenCalled());
+      expect(addVariantToCart.mock.calls[0][1]).toBe(1); // variação Verde P, não a Azul P
+    });
+
+    it('produto sem cor nao mostra o seletor de cor', async () => {
+      getProduct.mockResolvedValue(product);
+      getProductVariants.mockResolvedValue([{ variantId: 1, size: 'P', stock: 2, inStock: true }]);
+
+      renderAt(7);
+
+      await screen.findByRole('heading', { name: 'Blazer Alfaiataria' });
+      expect(screen.queryByText(/^Cor:/)).not.toBeInTheDocument();
+    });
   });
 });

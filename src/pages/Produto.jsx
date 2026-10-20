@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FiMinus, FiPlus } from 'react-icons/fi';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
@@ -9,6 +9,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import Seo from '@/components/shared/Seo';
+import ColorSelector from '@/components/product/ColorSelector';
 import ProductGallery from '@/components/product/ProductGallery';
 import SizeSelector from '@/components/product/SizeSelector';
 import { selectIsAuthenticated } from '@/features/auth/authSlice';
@@ -17,10 +18,26 @@ import { useProduct } from '@/hooks/useProduct';
 import { cn } from '@/lib/cn';
 import { siteOrigin } from '@/lib/seo';
 import { RETURN_POLICY_PATH, RETURN_WINDOW_DAYS, isOnSale } from '@/lib/returnPolicy';
+import { groupByColor, hasColors, sameColor } from '@/lib/variants';
 
 const LOW_STOCK = 5;
 
 const isSingleUnsized = (variants) => variants.length === 1 && variants[0].size === 'Único';
+
+/**
+ * Cores para o seletor: as do produto (com bolinha/miniatura) ou, se não
+ * vierem, as das variações. Vazio = produto sem cor.
+ */
+function colorOptions(product, variants) {
+  if (!hasColors(variants)) return [];
+  if (product?.colors?.length) return product.colors;
+  return groupByColor(variants).map((g) => ({
+    name: g.color,
+    hex: null,
+    image: null,
+    inStock: g.variants.some((v) => v.inStock),
+  }));
+}
 
 function ProdutoSkeleton() {
   return (
@@ -43,12 +60,30 @@ export default function Produto() {
   const location = useLocation();
   const dispatch = useDispatch();
   const isAuthenticated = useSelector(selectIsAuthenticated);
-  const { status, product, variants, error, reload } = useProduct(id);
+  const { status, product, variants: allVariants, error, reload } = useProduct(id);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedVariantId, setSelectedVariantId] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [feedback, setFeedback] = useState(null);
   const [adding, setAdding] = useState(false);
+
+  // Cor: a da URL (?cor=Verde, vinda do card ou de um link compartilhado) ou a
+  // primeira com estoque. Os tamanhos e as fotos mostrados são os dessa cor.
+  const colors = useMemo(() => colorOptions(product, allVariants), [product, allVariants]);
+  const wantedColor = searchParams.get('cor');
+  const selectedColor = colors.length
+    ? (
+        colors.find((c) => sameColor(c.name, wantedColor)) ||
+        colors.find((c) => c.inStock) ||
+        colors[0]
+      ).name
+    : '';
+  const variants = useMemo(
+    () =>
+      colors.length ? allVariants.filter((v) => sameColor(v.color, selectedColor)) : allVariants,
+    [allVariants, colors.length, selectedColor],
+  );
 
   const singleUnsized = isSingleUnsized(variants);
   const effectiveVariantId = singleUnsized ? variants[0]?.variantId : selectedVariantId;
@@ -57,6 +92,28 @@ export default function Produto() {
     () => variants.find((variant) => variant.variantId === effectiveVariantId) || null,
     [variants, effectiveVariantId],
   );
+
+  const galleryImages = useMemo(() => {
+    const images = product?.images || [];
+    if (!colors.length) return images;
+    const ofColor = images.filter((img) => !img.color || sameColor(img.color, selectedColor));
+    return ofColor.length ? ofColor : images;
+  }, [product, colors.length, selectedColor]);
+
+  const handleSelectColor = (name) => {
+    if (sameColor(name, selectedColor)) return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('cor', name);
+        return next;
+      },
+      { replace: true },
+    );
+    setSelectedVariantId(null);
+    setQuantity(1);
+    setFeedback(null);
+  };
 
   const maxQty = selectedVariant?.inStock ? selectedVariant.stock : 1;
   const qty = Math.min(quantity, maxQty);
@@ -118,7 +175,9 @@ export default function Produto() {
         <ProductSeo
           product={product}
           inStock={
-            variants.length > 0 ? variants.some((v) => v.inStock) : Number(product.quantity) > 0
+            allVariants.length > 0
+              ? allVariants.some((v) => v.inStock)
+              : Number(product.quantity) > 0
           }
         />
       )}
@@ -162,10 +221,12 @@ export default function Produto() {
 
           <div className="grid gap-10 lg:grid-cols-2">
             <ProductGallery
-              key={product.productId}
-              images={product.images}
+              key={`${product.productId}-${selectedColor}`}
+              images={galleryImages}
               image={product.image}
-              alt={product.productName}
+              alt={
+                selectedColor ? `${product.productName} — ${selectedColor}` : product.productName
+              }
             />
 
             <div className="flex flex-col gap-5">
@@ -182,6 +243,16 @@ export default function Produto() {
 
               {!product.inStock && (
                 <p className="text-sm font-medium text-danger">Produto esgotado no momento.</p>
+              )}
+
+              {colors.length > 0 && (
+                <ColorSelector colors={colors} value={selectedColor} onChange={handleSelectColor} />
+              )}
+
+              {product.inStock && colors.length > 0 && !variants.some((v) => v.inStock) && (
+                <p className="text-sm font-medium text-danger">
+                  {selectedColor} esgotada. Veja as outras cores.
+                </p>
               )}
 
               {!singleUnsized && variants.length > 0 && (

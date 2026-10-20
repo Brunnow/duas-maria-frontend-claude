@@ -53,4 +53,40 @@ describe('ProductCard', () => {
     renderCard({ price: 400, specialPrice: 299.9 });
     expect(norm(screen.getByText(/sem juros/).textContent)).toBe('ou 6x de R$ 49,98 sem juros');
   });
+
+  it('com mais de uma cor mostra as bolinhas, cada uma levando a cor pela URL', () => {
+    renderCard({
+      colors: [
+        { name: 'Verde', hex: '#2E7D32', image: null, inStock: true },
+        { name: 'Floral azul', hex: null, image: 'https://example.com/floral.jpg', inStock: false },
+      ],
+    });
+
+    expect(screen.getByRole('list', { name: '2 cores' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ver na cor Verde' })).toHaveAttribute(
+      'href',
+      '/produtos/1?cor=Verde',
+    );
+    expect(screen.getByRole('link', { name: 'Ver na cor Floral azul (esgotada)' })).toHaveAttribute(
+      'href',
+      '/produtos/1?cor=Floral%20azul',
+    );
+  });
+
+  it('com uma cor so (ou sem cor) nao mostra bolinhas', () => {
+    renderCard({ colors: [{ name: 'Verde', hex: '#2E7D32', image: null, inStock: true }] });
+    expect(screen.queryByRole('list', { name: /cores/ })).not.toBeInTheDocument();
+  });
+
+  it('mostra no maximo 5 cores e o "+N" do resto', () => {
+    const colors = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((name) => ({
+      name,
+      hex: '#000000',
+      image: null,
+      inStock: true,
+    }));
+    renderCard({ colors });
+    expect(screen.getAllByRole('link', { name: /^Ver na cor/ })).toHaveLength(5);
+    expect(screen.getByText('+2')).toBeInTheDocument();
+  });
 });
