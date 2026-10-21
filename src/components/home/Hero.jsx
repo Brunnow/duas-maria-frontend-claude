@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom';
 import Button from '@/components/ui/Button';
-import bannerFull from '@/assets/hero-banner.webp';
-import banner1200 from '@/assets/hero-banner-1200.webp';
-import bannerMobile from '@/assets/hero-banner-mobile.webp';
+
+// Ficam em public/hero (nome fixo com versão) para o index.html poder
+// pré-carregar a capa antes do JS. Ao trocar a arte, mude a versão nos dois.
+const bannerFull = '/hero/capa-1983-v1.webp';
+const banner1200 = '/hero/capa-1200-v1.webp';
+const bannerMobile = '/hero/capa-mobile-v1.webp';
 
 /*
  * Duas artes com a logo já aplicada: horizontal (md+) e vertical 4:5 (celular).

@@ -17,6 +17,27 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap"
     />
 
+    <!--
+      Foto da capa: começa a baixar junto com o JS, sem esperar o React montar.
+      Só na Home — em outras páginas seria peso à toa. Os nomes precisam bater
+      com os de src/components/home/Hero.jsx.
+    -->
+    <script>
+      if (location.pathname === '/') {
+        var l = document.createElement('link');
+        l.rel = 'preload';
+        l.as = 'image';
+        l.fetchPriority = 'high';
+        if (matchMedia('(min-width: 768px)').matches) {
+          l.imageSrcset = '/hero/capa-1200-v1.webp 1200w, /hero/capa-1983-v1.webp 1983w';
+          l.imageSizes = '100vw';
+        } else {
+          l.href = '/hero/capa-mobile-v1.webp';
+        }
+        document.head.appendChild(l);
+      }
+    </script>
+
     <title>Duas Maria | Moda feminina</title>
   </head>
   <body>
