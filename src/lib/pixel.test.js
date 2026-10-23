@@ -16,7 +16,7 @@ afterEach(() => {
 
 describe('pixel', () => {
   it('em dev, sem VITE_META_PIXEL_DEBUG, nao carrega nada nem dispara', async () => {
-    const pixel = await loadPixel({ VITE_META_PIXEL_ID: '1128713843004608' });
+    const pixel = await loadPixel({ VITE_META_PIXEL_ID: '4454956584769897' });
     pixel.initPixel();
     pixel.track('ViewContent', { value: 1 });
     expect(pixel.pixelEnabled).toBe(false);
@@ -31,7 +31,7 @@ describe('pixel', () => {
 
   it('com debug: carrega o script async, inicia sem PageView e passa o eventID', async () => {
     const pixel = await loadPixel({
-      VITE_META_PIXEL_ID: '1128713843004608',
+      VITE_META_PIXEL_ID: '4454956584769897',
       VITE_META_PIXEL_DEBUG: 'true',
     });
     pixel.initPixel();
@@ -40,7 +40,7 @@ describe('pixel', () => {
     const scripts = document.head.querySelectorAll('script[src*="fbevents"]');
     expect(scripts).toHaveLength(1);
     expect(scripts[0].async).toBe(true);
-    expect(window.fbq.queue).toEqual([['init', '1128713843004608']]);
+    expect(window.fbq.queue).toEqual([['init', '4454956584769897']]);
 
     pixel.trackPageView();
     pixel.track('Purchase', { value: 10, currency: 'BRL' }, 99);
