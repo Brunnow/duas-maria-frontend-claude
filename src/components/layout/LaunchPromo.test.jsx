@@ -13,7 +13,7 @@ const renderAt = (path = '/') =>
 
 const waitDelay = () =>
   act(() => {
-    vi.advanceTimersByTime(3100);
+    vi.advanceTimersByTime(15100);
   });
 
 describe('LaunchPromo', () => {
@@ -21,11 +21,15 @@ describe('LaunchPromo', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-18T20:00:00-03:00'));
     window.localStorage.clear();
+    window.sessionStorage.clear();
   });
   afterEach(() => vi.useRealTimers());
 
-  it('aparece alguns segundos depois de entrar, com os dois cupons', () => {
+  it('aparece so depois de 15 segundos na pagina, com os dois cupons', () => {
     renderAt('/');
+    act(() => {
+      vi.advanceTimersByTime(14000);
+    });
     expect(screen.queryByRole('complementary', { name: 'Lançamento do site' })).toBeNull();
     waitDelay();
     expect(screen.getByRole('complementary', { name: 'Lançamento do site' })).toBeInTheDocument();
@@ -34,14 +38,27 @@ describe('LaunchPromo', () => {
     expect(screen.getByRole('link', { name: 'Ver as peças' })).toHaveAttribute('href', '/produtos');
   });
 
-  it('fechar no X some e nao volta mais', () => {
+  it('fechar no X some e nao volta mais, nem em outra sessao', () => {
     const { unmount } = renderAt('/');
     waitDelay();
     fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     expect(screen.queryByText('PRIMEIRACOMPRA')).toBeNull();
     unmount();
+    window.sessionStorage.clear();
 
     renderAt('/');
+    waitDelay();
+    expect(screen.queryByText('PRIMEIRACOMPRA')).toBeNull();
+  });
+
+  it('aparece no maximo uma vez por sessao, mesmo sem fechar (ex.: F5)', () => {
+    const { unmount } = renderAt('/produtos/152');
+    waitDelay();
+    expect(screen.getByText('PRIMEIRACOMPRA')).toBeInTheDocument();
+    expect(window.sessionStorage.getItem('dm-launch-promo-shown')).toBe('1');
+    unmount();
+
+    renderAt('/produtos/152');
     waitDelay();
     expect(screen.queryByText('PRIMEIRACOMPRA')).toBeNull();
   });

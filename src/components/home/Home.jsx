@@ -16,9 +16,12 @@ import Hero from './Hero';
 import HighlightsStrip from './HighlightsStrip';
 
 const FEATURED_COUNT = 8;
+// Busca mais que 8 porque os esgotados (nenhum tamanho com estoque) saem dos
+// destaques — a API não filtra por estoque, mas cada produto já vem com inStock.
+const FEATURED_FETCH = 24;
 // Mais novos primeiro: o id cresce a cada produto cadastrado, e o padrão da
 // API (id crescente) mostraria justamente as peças mais antigas.
-const FEATURED_QUERY = `pageSize=${FEATURED_COUNT}&sortBy=productId&sortOrder=desc`;
+const FEATURED_QUERY = `pageSize=${FEATURED_FETCH}&sortBy=productId&sortOrder=desc`;
 
 export default function Home() {
   const dispatch = useDispatch();
@@ -33,7 +36,9 @@ export default function Home() {
 
   useRetryWhenVisible(Boolean(errorMessage), loadFeatured);
 
-  const featured = Array.isArray(products) ? products.slice(0, FEATURED_COUNT) : [];
+  const featured = Array.isArray(products)
+    ? products.filter((product) => product.inStock).slice(0, FEATURED_COUNT)
+    : [];
 
   return (
     <>

@@ -10,6 +10,24 @@ import {
 } from '@/lib/launchPromo';
 
 const STORAGE_KEY = 'dm-launch-promo-dismissed';
+// Já apareceu nesta sessão (aba): não abre de novo, nem depois de um F5.
+const SESSION_KEY = 'dm-launch-promo-shown';
+
+function shownThisSession() {
+  try {
+    return window.sessionStorage.getItem(SESSION_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function rememberShown() {
+  try {
+    window.sessionStorage.setItem(SESSION_KEY, '1');
+  } catch {
+    // Sem armazenamento: o estado do componente ainda evita reabrir nesta página.
+  }
+}
 
 function wasDismissed() {
   try {
@@ -29,24 +47,33 @@ function rememberDismissed() {
 
 /**
  * Card flutuante de lançamento com os cupons. Não cobre a tela nem bloqueia a
- * navegação; aparece uma vez por pessoa (fechar vale para sempre naquele
- * navegador), nunca no carrinho/checkout/login/admin e some sozinho depois da
- * data de fim (ver lib/launchPromo).
+ * navegação; só aparece depois de 15 s na mesma página, no máximo uma vez por
+ * sessão (fechar vale para sempre naquele navegador), nunca no
+ * carrinho/checkout/login/admin e some sozinho depois da data de fim (ver
+ * lib/launchPromo).
  */
 export default function LaunchPromo() {
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(wasDismissed);
+  // Lido uma vez: se já apareceu nesta sessão, não agenda de novo (o card que
+  // está aberto agora continua aberto).
+  const [alreadyShown] = useState(shownThisSession);
   const [copied, setCopied] = useState(null);
 
   const eligible = !dismissed && launchPromoActive();
   const hiddenHere = launchPromoHiddenOn(pathname);
 
+  // A contagem recomeça a cada troca de página (pathname nas dependências) e
+  // não corre onde o card não aparece.
   useEffect(() => {
-    if (!eligible || open) return undefined;
-    const timer = setTimeout(() => setOpen(true), LAUNCH_PROMO_DELAY_MS);
+    if (!eligible || open || alreadyShown || hiddenHere) return undefined;
+    const timer = setTimeout(() => {
+      rememberShown();
+      setOpen(true);
+    }, LAUNCH_PROMO_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [eligible, open]);
+  }, [eligible, open, alreadyShown, hiddenHere, pathname]);
 
   const dismiss = () => {
     rememberDismissed();

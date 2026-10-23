@@ -11,8 +11,11 @@ export const LAUNCH_PROMO_COUPONS = [
 /** Último instante em que o card aparece (horário de Brasília). */
 export const LAUNCH_PROMO_ENDS_AT = new Date('2026-10-25T23:59:59-03:00');
 
-/** Atraso para o card aparecer depois que a pessoa entra no site. */
-export const LAUNCH_PROMO_DELAY_MS = 3000;
+/**
+ * Tempo na MESMA página antes do card aparecer (trocar de página recomeça a
+ * contagem): quem está olhando uma peça não é interrompido logo de cara.
+ */
+export const LAUNCH_PROMO_DELAY_MS = 15000;
 
 /** Onde o card não aparece: no meio da compra e fora da loja. */
 const HIDDEN_PREFIXES = ['/carrinho', '/checkout', '/login', '/cadastro', '/admin'];

@@ -11,7 +11,14 @@ vi.mock('./Hero', () => ({ default: () => null }));
 vi.mock('./HighlightsStrip', () => ({ default: () => null }));
 vi.mock('./CategoryShowcase', () => ({ default: () => null }));
 
-const product = { productId: 9, productName: 'Blusa Seda', image: '', quantity: 3, price: 120 };
+const product = {
+  productId: 9,
+  productName: 'Blusa Seda',
+  image: '',
+  quantity: 3,
+  price: 120,
+  inStock: true,
+};
 
 const renderHome = (products, errorMessage = null) => {
   const store = configureStore({
@@ -34,7 +41,23 @@ describe('Home — peças em destaque', () => {
 
   it('busca os produtos mais novos primeiro', () => {
     renderHome([product]);
-    expect(fetchProducts).toHaveBeenCalledWith('pageSize=8&sortBy=productId&sortOrder=desc');
+    expect(fetchProducts).toHaveBeenCalledWith('pageSize=24&sortBy=productId&sortOrder=desc');
+  });
+
+  it('esgotados (nenhum tamanho com estoque) ficam fora dos destaques, no maximo 8', () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({
+      ...product,
+      productId: 100 + i,
+      productName: `Peça ${i}`,
+    }));
+    renderHome([
+      { ...product, productId: 511, productName: 'Macacão esgotado', inStock: false },
+      ...many,
+    ]);
+    expect(screen.queryByText('Macacão esgotado')).not.toBeInTheDocument();
+    expect(screen.getByText('Peça 0')).toBeInTheDocument();
+    expect(screen.getByText('Peça 7')).toBeInTheDocument();
+    expect(screen.queryByText('Peça 8')).not.toBeInTheDocument();
   });
 
   it('tem o link discreto para ver todos os produtos', () => {
