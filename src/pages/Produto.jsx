@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FiMinus, FiPlus } from 'react-icons/fi';
@@ -16,6 +16,7 @@ import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import { addToCart, openDrawer } from '@/features/cart/cartSlice';
 import { useProduct } from '@/hooks/useProduct';
 import { cn } from '@/lib/cn';
+import { money, track } from '@/lib/pixel';
 import { siteOrigin } from '@/lib/seo';
 import { RETURN_POLICY_PATH, RETURN_WINDOW_DAYS, isOnSale } from '@/lib/returnPolicy';
 import { groupByColor, hasColors, sameColor } from '@/lib/variants';
@@ -67,6 +68,21 @@ export default function Produto() {
   const [quantity, setQuantity] = useState(1);
   const [feedback, setFeedback] = useState(null);
   const [adding, setAdding] = useState(false);
+
+  // Pixel: ViewContent uma vez por produto aberto (o ref segura o efeito
+  // duplo do StrictMode e as recargas do mesmo produto).
+  const viewedRef = useRef(null);
+  useEffect(() => {
+    if (status !== 'ready' || !product || viewedRef.current === product.productId) return;
+    viewedRef.current = product.productId;
+    track('ViewContent', {
+      content_type: 'product',
+      content_ids: [String(product.productId)],
+      content_name: product.productName,
+      value: money(product.specialPrice ?? product.price),
+      currency: 'BRL',
+    });
+  }, [status, product]);
 
   // Cor: a da URL (?cor=Verde, vinda do card ou de um link compartilhado) ou a
   // primeira com estoque. Os tamanhos e as fotos mostrados são os dessa cor.
@@ -146,6 +162,15 @@ export default function Produto() {
           quantity: qty,
         }),
       ).unwrap();
+      const unitPrice = money(product.specialPrice ?? product.price);
+      track('AddToCart', {
+        content_type: 'product',
+        content_ids: [String(product.productId)],
+        content_name: product.productName,
+        value: money(unitPrice * qty),
+        currency: 'BRL',
+        contents: [{ id: String(product.productId), quantity: qty }],
+      });
       dispatch(openDrawer());
     } catch (payload) {
       if (payload?.code === 'unauthorized') {

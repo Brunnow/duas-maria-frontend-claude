@@ -4,6 +4,9 @@ import './index.css';
 import App from './App.jsx';
 import { Provider } from 'react-redux';
 import { store } from './store/reducers/store.js';
+import { initPixel } from './lib/pixel.js';
+
+initPixel();
 
 createRoot(document.getElementById('root')).render(
   <Provider store={store}>

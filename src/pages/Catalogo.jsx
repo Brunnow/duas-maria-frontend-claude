@@ -13,9 +13,13 @@ import ProductGridSkeleton from '@/components/shared/ProductGridSkeleton';
 import Seo from '@/components/shared/Seo';
 import { useCatalog } from '@/hooks/useCatalog';
 import { useRetryWhenVisible } from '@/hooks/useRetryWhenVisible';
+import { track } from '@/lib/pixel';
 import { fetchCategories } from '@/store/actions';
 
 const PAGE_SIZE_HINT = 12;
+// A busca já tem debounce enquanto digita; o Pixel espera o termo parar um
+// pouco mais para não registrar "ve", "ves", "vest"… como buscas separadas.
+const SEARCH_TRACK_DELAY_MS = 1500;
 
 export default function Catalogo() {
   const dispatch = useDispatch();
@@ -30,6 +34,15 @@ export default function Catalogo() {
   }, [dispatch]);
 
   useRetryWhenVisible(Boolean(errorMessage), reload);
+
+  useEffect(() => {
+    if (!filters.keyword) return undefined;
+    const timer = setTimeout(
+      () => track('Search', { search_string: filters.keyword }),
+      SEARCH_TRACK_DELAY_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [filters.keyword]);
 
   const list = Array.isArray(products) ? products : [];
   const total = pagination?.totalElements ?? 0;

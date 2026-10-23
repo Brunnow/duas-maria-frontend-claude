@@ -1,4 +1,5 @@
 import api from '@/api/api';
+import { metaCookies } from '@/lib/pixel';
 
 /*
  * Checkout com Mercado Pago (Fase D), exige auth:
@@ -30,6 +31,9 @@ export function createOrder({
     couponCode: couponCodes[0] || undefined,
     couponCodes: couponCodes.length > 0 ? couponCodes : undefined,
     shippingServiceId: shippingServiceId ?? undefined,
+    // Cookies do Pixel da Meta (_fbp/_fbc), se existirem, para a futura API de
+    // Conversões no backend. Hoje o backend ainda ignora esses campos.
+    ...metaCookies(),
   };
   return api.post('/orders', body).then((response) => response.data);
 }

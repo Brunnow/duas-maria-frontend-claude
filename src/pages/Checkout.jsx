@@ -14,6 +14,7 @@ import { fetchAddresses, selectAddresses } from '@/features/address/addressSlice
 import { createOrder, startMercadoPagoPayment } from '@/services/orderService';
 import { getShippingOptions } from '@/services/shippingService';
 import { goToExternal } from '@/lib/navigate';
+import { money, track } from '@/lib/pixel';
 import { variantLabel } from '@/lib/variants';
 
 const STEPS = ['Endereço', 'Frete', 'Revisão'];
@@ -128,6 +129,17 @@ export default function Checkout() {
     (step === 0 && effectiveAddressId != null) || (step === 1 && shippingReady) || step === 2;
 
   const handleConfirm = async () => {
+    // Pixel: o clique que leva ao Mercado Pago. Valor no mesmo critério do
+    // Purchase: produtos com os cupons já descontados, sem o frete.
+    const subtotal = items.reduce((sum, item) => sum + money(item.lineTotal), 0);
+    const couponDiscount = coupons.reduce((sum, c) => sum + money(c.discountAmount), 0);
+    track('InitiateCheckout', {
+      content_type: 'product',
+      content_ids: [...new Set(items.map((item) => String(item.productId)))],
+      value: money(Math.max(subtotal - couponDiscount, 0)),
+      currency: 'BRL',
+      num_items: items.reduce((sum, item) => sum + (item.quantity ?? 0), 0),
+    });
     setPlacing(true);
     setError(null);
     setShortage(null);

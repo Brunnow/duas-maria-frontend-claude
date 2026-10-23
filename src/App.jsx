@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-d
 import { onUnauthorized } from '@/api/api';
 import Layout from '@/components/layout/Layout';
 import ScrollToTop from '@/components/layout/ScrollToTop';
+import PixelPageView from '@/components/layout/PixelPageView';
 import Home from '@/components/home/Home';
 import Catalogo from '@/pages/Catalogo';
 import Produto from '@/pages/Produto';
@@ -56,6 +57,7 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
+      <PixelPageView />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />

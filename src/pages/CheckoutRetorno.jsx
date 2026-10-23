@@ -8,9 +8,60 @@ import OrderConfirmation from '@/components/checkout/OrderConfirmation';
 import { fetchCart } from '@/features/cart/cartSlice';
 import { fetchOrderById, startMercadoPagoPayment } from '@/services/orderService';
 import { goToExternal } from '@/lib/navigate';
+import { money, track } from '@/lib/pixel';
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLLS = 20; // ~1 min consultando antes de desistir de esperar
+
+// Pedidos cujo Purchase já foi enviado ao Pixel neste navegador: F5 ou voltar
+// para esta tela não conta a compra de novo.
+const TRACKED_PURCHASES_KEY = 'dm-pixel-purchases';
+const TRACKED_PURCHASES_MAX = 50;
+
+function readTrackedPurchases() {
+  try {
+    const list = JSON.parse(window.localStorage.getItem(TRACKED_PURCHASES_KEY));
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+function trackPurchaseOnce(order) {
+  const id = String(order.orderId);
+  const tracked = readTrackedPurchases();
+  if (tracked.includes(id)) return;
+  try {
+    window.localStorage.setItem(
+      TRACKED_PURCHASES_KEY,
+      JSON.stringify([...tracked, id].slice(-TRACKED_PURCHASES_MAX)),
+    );
+  } catch {
+    // Sem armazenamento: dispara mesmo assim; o event_id ainda deixa a Meta deduplicar.
+  }
+  const items = order.orderItems || [];
+  track(
+    'Purchase',
+    {
+      content_type: 'product',
+      content_ids: [
+        ...new Set(
+          items
+            .map((item) => item.product?.productId)
+            .filter(Boolean)
+            .map(String),
+        ),
+      ],
+      // Valor pago SEM o frete: totalAmount já vem com os cupons descontados e
+      // inclui o frete, que aqui sai — é receita de produto, no mesmo critério
+      // do InitiateCheckout.
+      value: money(money(order.totalAmount) - money(order.shippingAmount)),
+      currency: 'BRL',
+      num_items: items.reduce((sum, item) => sum + (item.quantity ?? 0), 0),
+    },
+    id, // event_id = id do pedido, para a API de Conversões deduplicar depois
+  );
+}
 
 /*
  * Tela de volta do Checkout Pro (back_urls). O Mercado Pago pode anexar
@@ -76,6 +127,10 @@ export default function CheckoutRetorno() {
       clearTimeout(timer);
     };
   }, [orderId, dispatch]);
+
+  useEffect(() => {
+    if (phase === 'approved' && order) trackPurchaseOnce(order);
+  }, [phase, order]);
 
   const handleRetryPayment = async () => {
     setRetrying(true);
@@ -145,8 +200,8 @@ export default function CheckoutRetorno() {
         <div className="mx-auto max-w-md text-center">
           <p className="font-display text-2xl text-foreground">Pedido cancelado</p>
           <p className="mt-2 text-sm text-muted">
-            Este pedido foi cancelado e não pode mais ser pago. Se ainda quiser as peças, é só
-            fazer um novo pedido pelo carrinho.
+            Este pedido foi cancelado e não pode mais ser pago. Se ainda quiser as peças, é só fazer
+            um novo pedido pelo carrinho.
           </p>
           <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Button as={Link} to="/carrinho">
