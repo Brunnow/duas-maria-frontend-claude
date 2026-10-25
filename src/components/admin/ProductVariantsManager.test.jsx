@@ -9,6 +9,7 @@ vi.mock('@/services/adminService', () => ({
   registerMovement: vi.fn(),
   renameColor: vi.fn(),
   deleteColor: vi.fn(),
+  reorderColors: vi.fn(),
 }));
 
 import * as adminService from '@/services/adminService';
@@ -164,6 +165,36 @@ describe('ProductVariantsManager', () => {
         ),
       ).toEqual(['Tamanho P Esgotado', 'Tamanho M Baixo · 2']);
       expect(screen.getByText('Cores, tamanhos e estoque')).toBeInTheDocument();
+    });
+
+    it('segue a ordem de cores escolhida (colorOrder) e as setas trocam a cor de lugar', async () => {
+      adminService.getVariants.mockResolvedValue([
+        { ...colored(1, 'Verde', 'P', 1), colorOrder: 1 },
+        { ...colored(3, 'Azul', 'P', 1), colorOrder: 0 },
+      ]);
+      adminService.reorderColors.mockResolvedValue([]);
+      render(<ProductVariantsManager productId={7} />);
+
+      const azul = await screen.findByRole('region', { name: 'Cor Azul' });
+      const verde = screen.getByRole('region', { name: 'Cor Verde' });
+      expect(azul.compareDocumentPosition(verde) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Subir cor Azul' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Descer cor Verde' })).toBeDisabled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Subir cor Verde' }));
+
+      await waitFor(() =>
+        expect(adminService.reorderColors).toHaveBeenCalledWith(7, ['Verde', 'Azul']),
+      );
+      await waitFor(() => expect(adminService.getVariants).toHaveBeenCalledTimes(2));
+    });
+
+    it('com uma cor so, nao mostra as setas', async () => {
+      adminService.getVariants.mockResolvedValue([colored(1, 'Verde', 'P', 1)]);
+      render(<ProductVariantsManager productId={7} />);
+
+      await screen.findByRole('region', { name: 'Cor Verde' });
+      expect(screen.queryByRole('button', { name: /Subir cor/ })).toBeNull();
     });
 
     it('adicionar tamanho dentro de uma cor envia a cor', async () => {

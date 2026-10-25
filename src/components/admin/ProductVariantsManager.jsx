@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { FiArrowDown, FiArrowUp } from 'react-icons/fi';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -114,6 +115,13 @@ export default function ProductVariantsManager({ productId, productColors, onClo
       setRecountFor(null);
       setRecountValue('');
     });
+  };
+
+  // Troca a cor de lugar com a vizinha (-1 = sobe, 1 = desce) e grava a ordem inteira.
+  const moveColor = (index, step) => {
+    const order = groups.map((g) => g.color);
+    [order[index], order[index + step]] = [order[index + step], order[index]];
+    run('order', () => adminService.reorderColors(productId, order));
   };
 
   const submitMovement = (body) => {
@@ -234,7 +242,12 @@ export default function ProductVariantsManager({ productId, productColors, onClo
           </p>
         ) : colored ? (
           <div className="flex flex-col gap-5">
-            {groups.map((group) => (
+            {groups.length > 1 && (
+              <p className="text-xs text-muted">
+                As cores aparecem na loja nesta ordem. Use as setas para mudar.
+              </p>
+            )}
+            {groups.map((group, index) => (
               <section
                 key={group.color}
                 aria-label={`Cor ${group.color}`}
@@ -251,6 +264,28 @@ export default function ProductVariantsManager({ productId, productColors, onClo
                   </p>
                   {editingColor !== group.color && (
                     <div className="flex gap-1">
+                      {groups.length > 1 && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => moveColor(index, -1)}
+                            disabled={index === 0 || busy === 'order'}
+                            aria-label={`Subir cor ${group.color}`}
+                          >
+                            <FiArrowUp aria-hidden="true" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => moveColor(index, 1)}
+                            disabled={index === groups.length - 1 || busy === 'order'}
+                            aria-label={`Descer cor ${group.color}`}
+                          >
+                            <FiArrowDown aria-hidden="true" />
+                          </Button>
+                        </>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

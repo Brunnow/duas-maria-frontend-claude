@@ -152,6 +152,16 @@ export function deleteColor(productId, name) {
     .then((response) => response.data);
 }
 
+/**
+ * PUT /api/admin/products/{productId}/colors/order { colors: [...] } -> ProductVariantDTO[]
+ * Ordem das cores na loja: todas as cores do produto, da primeira à última.
+ */
+export function reorderColors(productId, colors) {
+  return api
+    .put(`/admin/products/${productId}/colors/order`, { colors })
+    .then((response) => response.data);
+}
+
 /** DELETE /api/admin/products/{productId}/variants/{variantId} (estoque deve ser 0) */
 export function deleteVariant(productId, variantId) {
   return api

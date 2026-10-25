@@ -29,6 +29,18 @@ describe('groupByColor', () => {
     expect(groups[1].colorHex).toBe('#1565C0');
   });
 
+  it('a ordem escolhida no admin (colorOrder) vem antes da ordem de criacao', () => {
+    const groups = groupByColor([
+      { ...v(10, 'Verde', 'P'), colorOrder: 1 },
+      { ...v(13, 'Azul', 'M'), colorOrder: 0 },
+      { ...v(11, 'Verde', 'G'), colorOrder: 1 },
+      { ...v(12, 'Azul', 'P'), colorOrder: 0 },
+    ]);
+
+    expect(groups.map((g) => g.color)).toEqual(['Azul', 'Verde']);
+    expect(groups[0].variants.map((x) => x.size)).toEqual(['P', 'M']);
+  });
+
   it('produto sem cor vira um grupo so', () => {
     const groups = groupByColor([v(1, '', 'M'), v(2, '', 'P')]);
     expect(groups).toHaveLength(1);

@@ -42,15 +42,18 @@ export function hasColors(variants) {
   return (variants || []).some((v) => (v.color || '').trim() !== '');
 }
 
+const colorRank = (v) => v.colorOrder ?? Number.MAX_SAFE_INTEGER;
+
 /**
- * Agrupa variações por cor, na ordem em que as cores foram criadas (menor variantId), e os
- * tamanhos de cada cor na ordem de exibição. Produto sem cor = um grupo com color ''.
+ * Agrupa variações por cor, na ordem escolhida no admin (colorOrder, que o backend calcula;
+ * sem ele, a ordem de criação: menor variantId), e os tamanhos de cada cor na ordem de
+ * exibição. Produto sem cor = um grupo com color ''.
  * -> [{ color, colorHex, variants: [...] }]
  */
 export function groupByColor(variants) {
   const groups = new Map();
   [...(variants || [])]
-    .sort((a, b) => (a.variantId ?? 0) - (b.variantId ?? 0))
+    .sort((a, b) => colorRank(a) - colorRank(b) || (a.variantId ?? 0) - (b.variantId ?? 0))
     .forEach((v) => {
       const key = colorKey(v.color);
       if (!groups.has(key))
