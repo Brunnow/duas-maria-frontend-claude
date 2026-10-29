@@ -9,7 +9,7 @@ export const LAUNCH_PROMO_COUPONS = [
 ];
 
 /** Último instante em que o card aparece (horário de Brasília). */
-export const LAUNCH_PROMO_ENDS_AT = new Date('2026-10-25T23:59:59-03:00');
+export const LAUNCH_PROMO_ENDS_AT = new Date('2026-11-04T23:59:59-03:00');
 
 /**
  * Tempo na MESMA página antes do card aparecer (trocar de página recomeça a

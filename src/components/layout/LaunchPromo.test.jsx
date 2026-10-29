@@ -92,7 +92,7 @@ describe('LaunchPromo', () => {
     expect(launchPromoHiddenOn('/carrinho')).toBe(true);
     expect(launchPromoHiddenOn('/admin/produtos')).toBe(true);
     expect(launchPromoHiddenOn('/produtos/152')).toBe(false);
-    expect(launchPromoActive(new Date('2026-10-25T23:00:00-03:00'))).toBe(true);
-    expect(launchPromoActive(new Date('2026-10-26T00:00:01-03:00'))).toBe(false);
+    expect(launchPromoActive(new Date('2026-11-04T23:00:00-03:00'))).toBe(true);
+    expect(launchPromoActive(new Date('2026-11-05T00:00:01-03:00'))).toBe(false);
   });
 });
