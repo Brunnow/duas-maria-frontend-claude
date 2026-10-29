@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { anonymousAuth, authenticatedAuth, makeStore } from '@/test/renderWithProviders';
@@ -8,6 +8,7 @@ vi.mock('@/services/productService', () => ({
   getProduct: vi.fn(),
   getProductVariants: vi.fn(),
 }));
+vi.mock('@/lib/pixel', async (importOriginal) => ({ ...(await importOriginal()), track: vi.fn() }));
 vi.mock('@/services/cartService', () => ({
   getCart: vi.fn().mockResolvedValue({ cartId: 1, totalPrice: 0, items: [] }),
   addVariantToCart: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock('@/services/cartService', () => ({
 
 import { getProduct, getProductVariants } from '@/services/productService';
 import { addVariantToCart } from '@/services/cartService';
+import { track } from '@/lib/pixel';
 import Produto from './Produto';
 
 const product = {
@@ -65,7 +67,10 @@ function renderAt(id, { auth = authenticatedAuth, query = '' } = {}) {
   return store;
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  window.localStorage.clear();
+});
 
 describe('Produto (PDP)', () => {
   it('renderiza o produto e o seletor de tamanho, com tamanho sem estoque desabilitado', async () => {
@@ -182,32 +187,129 @@ describe('Produto (PDP)', () => {
     expect(store.getState().cart.drawerOpen).toBe(false);
   });
 
-  it('deslogado: clicar em adicionar leva para /login sem chamar a API', async () => {
+  it('deslogado: adiciona no carrinho do visitante, sem login e sem chamar a API', async () => {
     getProduct.mockResolvedValue(product);
     getProductVariants.mockResolvedValue([
       { variantId: 55, size: 'Único', stock: 5, inStock: true },
     ]);
 
-    renderAt(7, { auth: anonymousAuth });
+    const store = renderAt(7, { auth: anonymousAuth });
 
     (await screen.findByRole('button', { name: 'Adicionar ao carrinho' })).click();
 
-    expect(await screen.findByText('Tela de login')).toBeInTheDocument();
+    await waitFor(() => expect(store.getState().cart.drawerOpen).toBe(true));
+    expect(screen.queryByText('Tela de login')).toBeNull();
     expect(addVariantToCart).not.toHaveBeenCalled();
+    expect(store.getState().cart.items).toEqual([
+      expect.objectContaining({
+        productId: 7,
+        variantId: 55,
+        productName: 'Blazer Alfaiataria',
+        size: 'Único',
+        unitPrice: 459.9,
+        quantity: 1,
+      }),
+    ]);
+    expect(JSON.parse(window.localStorage.getItem('dm-guest-cart'))).toHaveLength(1);
   });
 
-  it('logado: 401 do carrinho redireciona para /login', async () => {
+  it('logado: 401 do carrinho (sessao caiu) guarda a peca como visitante, sem ir ao login', async () => {
     getProduct.mockResolvedValue(product);
     getProductVariants.mockResolvedValue([
       { variantId: 55, size: 'Único', stock: 5, inStock: true },
     ]);
     addVariantToCart.mockRejectedValue({ response: { status: 401 } });
 
-    renderAt(7);
+    const store = renderAt(7);
 
     (await screen.findByRole('button', { name: 'Adicionar ao carrinho' })).click();
 
-    expect(await screen.findByText('Tela de login')).toBeInTheDocument();
+    await waitFor(() => expect(store.getState().cart.drawerOpen).toBe(true));
+    expect(screen.queryByText('Tela de login')).toBeNull();
+    expect(store.getState().cart.owner).toBe('guest');
+  });
+
+  describe('Pixel AddToCart', () => {
+    const addToCartCalls = () => track.mock.calls.filter(([event]) => event === 'AddToCart');
+    const expected = {
+      content_type: 'product',
+      content_ids: ['7'],
+      content_name: 'Blazer Alfaiataria',
+      value: 459.9,
+      currency: 'BRL',
+      contents: [{ id: '7', quantity: 1 }],
+    };
+
+    it.each([
+      ['visitante', anonymousAuth],
+      ['logado', authenticatedAuth],
+    ])('%s: dispara uma vez, com os mesmos parametros', async (_, auth) => {
+      getProduct.mockResolvedValue(product);
+      getProductVariants.mockResolvedValue([
+        { variantId: 55, size: 'Único', stock: 5, inStock: true },
+      ]);
+      addVariantToCart.mockResolvedValue(cartDto);
+
+      const store = renderAt(7, { auth });
+      (await screen.findByRole('button', { name: 'Adicionar ao carrinho' })).click();
+
+      await waitFor(() => expect(store.getState().cart.drawerOpen).toBe(true));
+      expect(addToCartCalls()).toEqual([['AddToCart', expected]]);
+    });
+
+    it('nao dispara quando a peca nao entra (ja estava no carrinho do visitante)', async () => {
+      getProduct.mockResolvedValue(product);
+      getProductVariants.mockResolvedValue([
+        { variantId: 55, size: 'Único', stock: 5, inStock: true },
+      ]);
+
+      renderAt(7, { auth: anonymousAuth });
+      const button = await screen.findByRole('button', { name: 'Adicionar ao carrinho' });
+      button.click();
+      await waitFor(() => expect(addToCartCalls()).toHaveLength(1));
+
+      fireEvent.click(button);
+      expect(await screen.findByText(/já está no seu carrinho/)).toBeInTheDocument();
+      expect(addToCartCalls()).toHaveLength(1);
+    });
+  });
+
+  describe('celular: barra fixa de compra', () => {
+    const originalMatchMedia = window.matchMedia;
+    beforeEach(() => {
+      // Tela menor que 1024px: (min-width: 1024px) nao bate.
+      window.matchMedia = vi.fn().mockImplementation((query) => ({
+        matches: false,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+    });
+    afterEach(() => {
+      window.matchMedia = originalMatchMedia;
+    });
+
+    it('tamanho e botao ficam na barra do rodape (uma vez so na pagina)', async () => {
+      getProduct.mockResolvedValue(product);
+      getProductVariants.mockResolvedValue([
+        { variantId: 55, size: 'P', stock: 5, inStock: true },
+        { variantId: 56, size: 'M', stock: 0, inStock: false },
+      ]);
+
+      const store = renderAt(7, { auth: anonymousAuth });
+
+      const bar = await screen.findByRole('region', { name: 'Comprar' });
+      expect(bar).toHaveClass('fixed', 'bottom-0');
+      expect(screen.getAllByRole('radiogroup', { name: 'Tamanho' })).toHaveLength(1);
+      expect(within(bar).getByRole('radiogroup', { name: 'Tamanho' })).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: 'Selecione um tamanho' })).toHaveLength(1);
+
+      fireEvent.click(within(bar).getByLabelText('P'));
+      fireEvent.click(within(bar).getByRole('button', { name: 'Adicionar ao carrinho' }));
+
+      await waitFor(() => expect(store.getState().cart.items).toHaveLength(1));
+      expect(store.getState().cart.items[0]).toMatchObject({ variantId: 55, size: 'P' });
+    });
   });
 
   describe('cores', () => {

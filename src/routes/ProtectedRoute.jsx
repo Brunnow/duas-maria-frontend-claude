@@ -9,6 +9,10 @@ import { selectAuth } from '@/features/auth/authSlice';
  * estado de carregamento (evita "piscar" a tela de login). Sem sessao,
  * redireciona para /login guardando a rota pretendida em state.from.
  */
+const LOGIN_MESSAGES = {
+  '/checkout': 'Entre ou crie sua conta para finalizar a compra. Seu carrinho fica guardado.',
+};
+
 export default function ProtectedRoute() {
   const { status } = useSelector(selectAuth);
   const location = useLocation();
@@ -22,7 +26,10 @@ export default function ProtectedRoute() {
   }
 
   if (status !== 'authenticated') {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    const message = LOGIN_MESSAGES[location.pathname];
+    return (
+      <Navigate to="/login" replace state={{ from: location, ...(message ? { message } : {}) }} />
+    );
   }
 
   return <Outlet />;

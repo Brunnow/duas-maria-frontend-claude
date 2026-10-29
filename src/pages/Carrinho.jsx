@@ -7,7 +7,7 @@ import FreeShippingProgress from '@/components/cart/FreeShippingProgress';
 import { selectCart } from '@/features/cart/cartSlice';
 import { formatCurrency } from '@/lib/format';
 
-/* Rota protegida (ver App.jsx) — so renderiza para usuario autenticado. */
+/* Rota publica: com login mostra o carrinho do backend; sem login, o do navegador. */
 export default function Carrinho() {
   const { cartId, items, totalPrice, opError } = useSelector(selectCart);
 

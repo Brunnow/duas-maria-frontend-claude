@@ -9,7 +9,7 @@ export default function FloatingWhatsApp() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Falar no WhatsApp"
-      className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-pop transition-transform hover:scale-105"
+      className="fixed bottom-[calc(var(--buy-bar-h,0px)+1.25rem)] right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-pop transition-transform hover:scale-105"
     >
       <FaWhatsapp size={28} aria-hidden="true" />
     </a>

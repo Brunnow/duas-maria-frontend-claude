@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import { anonymousAuth, cartState, renderWithProviders } from '@/test/renderWithProviders';
+import { authenticatedAuth, cartState, renderWithProviders } from '@/test/renderWithProviders';
 import CartDrawer from './CartDrawer';
 
 vi.mock('@/services/cartService', () => ({
@@ -29,7 +29,7 @@ const item = {
   lineTotal: 100,
 };
 
-const openWith = (items) => ({ ...anonymousAuth, ...cartState(items, { drawerOpen: true }) });
+const openWith = (items) => ({ ...authenticatedAuth, ...cartState(items, { drawerOpen: true }) });
 
 describe('CartDrawer', () => {
   it('mostra o estado vazio quando nao ha itens', () => {

@@ -46,6 +46,7 @@ export function cartState(items = [], overrides = {}) {
       cartId: 1,
       items,
       totalPrice: items.reduce((sum, it) => sum + (it.lineTotal || 0), 0),
+      owner: 'user',
       status: 'ready',
       drawerOpen: false,
       opError: null,

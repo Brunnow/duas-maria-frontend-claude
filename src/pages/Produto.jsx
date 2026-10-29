@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { FiMinus, FiPlus } from 'react-icons/fi';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
@@ -12,8 +12,8 @@ import Seo from '@/components/shared/Seo';
 import ColorSelector from '@/components/product/ColorSelector';
 import ProductGallery from '@/components/product/ProductGallery';
 import SizeSelector from '@/components/product/SizeSelector';
-import { selectIsAuthenticated } from '@/features/auth/authSlice';
 import { addToCart, openDrawer } from '@/features/cart/cartSlice';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useProduct } from '@/hooks/useProduct';
 import { cn } from '@/lib/cn';
 import { money, track } from '@/lib/pixel';
@@ -57,10 +57,9 @@ function ProdutoSkeleton() {
 
 export default function Produto() {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
   const dispatch = useDispatch();
-  const isAuthenticated = useSelector(selectIsAuthenticated);
+  // Celular/tablet: tamanho e botão de comprar vão para a barra fixa do rodapé.
+  const isDesktop = useMediaQuery('(min-width: 1024px)', true);
   const { status, product, variants: allVariants, error, reload } = useProduct(id);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -140,18 +139,10 @@ export default function Produto() {
     setFeedback(null);
   };
 
-  const goToLogin = () =>
-    navigate('/login', {
-      state: { from: location, message: 'Entre para adicionar itens ao carrinho.' },
-    });
-
   const handleAdd = async () => {
     if (!selectedVariant || !selectedVariant.inStock) return;
-    // Sem sessao: leva ao login preservando a rota (a intencao de compra).
-    if (!isAuthenticated) {
-      goToLogin();
-      return;
-    }
+    // Sem login a peça entra no carrinho do navegador; o login só é pedido
+    // no checkout. `item` é o que o carrinho do visitante mostra.
     setAdding(true);
     setFeedback(null);
     try {
@@ -160,6 +151,16 @@ export default function Produto() {
           productId: product.productId,
           variantId: selectedVariant.variantId,
           quantity: qty,
+          item: {
+            productName: product.productName,
+            image: galleryImages[0]?.url || product.image,
+            color: selectedVariant.color || selectedColor,
+            size: selectedVariant.size,
+            unitPrice: isOnSale(product.price, product.specialPrice)
+              ? product.specialPrice
+              : product.price,
+            stock: selectedVariant.stock,
+          },
         }),
       ).unwrap();
       const unitPrice = money(product.specialPrice ?? product.price);
@@ -173,9 +174,7 @@ export default function Produto() {
       });
       dispatch(openDrawer());
     } catch (payload) {
-      if (payload?.code === 'unauthorized') {
-        goToLogin();
-      } else if (payload?.code === 'already_in_cart') {
+      if (payload?.code === 'already_in_cart') {
         // Ja esta no carrinho: avisa (antes so abria o drawer, sem explicar por
         // que a quantidade escolhida nao entrou) e abre para ajustar la.
         setFeedback({
@@ -193,6 +192,47 @@ export default function Produto() {
       setAdding(false);
     }
   };
+
+  const addLabel =
+    !singleUnsized && !selectedVariant
+      ? 'Selecione um tamanho'
+      : selectedVariant && !selectedVariant.inStock
+        ? 'Tamanho esgotado'
+        : 'Adicionar ao carrinho';
+
+  const sizeSelector = !singleUnsized && variants.length > 0 && (
+    <SizeSelector
+      variants={variants}
+      value={selectedVariantId}
+      onChange={handleSelectSize}
+      compact={!isDesktop}
+    />
+  );
+
+  const addButton = (className) => (
+    <Button
+      onClick={handleAdd}
+      loading={adding}
+      disabled={!selectedVariant?.inStock}
+      className={className}
+    >
+      {addLabel}
+    </Button>
+  );
+
+  const feedbackText = feedback && (
+    <p
+      role="status"
+      aria-live="polite"
+      className={cn(
+        'text-sm',
+        feedback.tone === 'success' && 'text-success',
+        feedback.tone === 'error' && 'text-danger',
+      )}
+    >
+      {feedback.message}
+    </p>
+  );
 
   return (
     <Container className="py-10 lg:py-14">
@@ -280,13 +320,7 @@ export default function Produto() {
                 </p>
               )}
 
-              {!singleUnsized && variants.length > 0 && (
-                <SizeSelector
-                  variants={variants}
-                  value={selectedVariantId}
-                  onChange={handleSelectSize}
-                />
-              )}
+              {isDesktop && sizeSelector}
 
               {variants.length === 0 && (
                 <p className="text-sm text-muted">Tamanhos indisponíveis para este produto.</p>
@@ -337,33 +371,10 @@ export default function Produto() {
                   </button>
                 </div>
 
-                <Button
-                  onClick={handleAdd}
-                  loading={adding}
-                  disabled={!selectedVariant?.inStock}
-                  className="flex-1 sm:flex-none sm:px-10"
-                >
-                  {!singleUnsized && !selectedVariant
-                    ? 'Selecione um tamanho'
-                    : selectedVariant && !selectedVariant.inStock
-                      ? 'Tamanho esgotado'
-                      : 'Adicionar ao carrinho'}
-                </Button>
+                {isDesktop && addButton('px-10')}
               </div>
 
-              {feedback && (
-                <p
-                  role="status"
-                  aria-live="polite"
-                  className={cn(
-                    'text-sm',
-                    feedback.tone === 'success' && 'text-success',
-                    feedback.tone === 'error' && 'text-danger',
-                  )}
-                >
-                  {feedback.message}
-                </p>
-              )}
+              {isDesktop && feedbackText}
 
               <p className="text-xs text-muted">
                 {isOnSale(product.price, product.specialPrice)
@@ -389,9 +400,57 @@ export default function Produto() {
               )}
             </div>
           </div>
+
+          {!isDesktop && (
+            <StickyBuyBar>
+              {sizeSelector}
+              <div className="flex items-center gap-3">
+                <Price
+                  price={product.price}
+                  specialPrice={product.specialPrice}
+                  className="shrink-0 flex-col gap-y-0 text-sm"
+                />
+                {addButton('flex-1')}
+              </div>
+              {feedbackText}
+            </StickyBuyBar>
+          )}
         </>
       )}
     </Container>
+  );
+}
+
+/**
+ * Barra fixa no rodapé (celular/tablet) com tamanho + botão de comprar, à
+ * vista sem rolar. Publica a própria altura em --buy-bar-h para o Layout
+ * reservar o espaço no fim da página e os botões flutuantes subirem.
+ */
+function StickyBuyBar({ children }) {
+  const ref = useRef(null);
+
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const update = () =>
+      root.style.setProperty('--buy-bar-h', `${ref.current?.offsetHeight || 0}px`);
+    update();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    if (observer && ref.current) observer.observe(ref.current);
+    return () => {
+      observer?.disconnect();
+      root.style.removeProperty('--buy-bar-h');
+    };
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      aria-label="Comprar"
+      role="region"
+      className="fixed inset-x-0 bottom-0 z-30 flex flex-col gap-2 border-t border-border bg-surface px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-pop"
+    >
+      {children}
+    </div>
   );
 }
 

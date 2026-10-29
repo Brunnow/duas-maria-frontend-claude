@@ -32,7 +32,7 @@ import AdminTarja from '@/pages/admin/AdminTarja';
 import ProtectedRoute from '@/routes/ProtectedRoute';
 import AdminRoute from '@/routes/AdminRoute';
 import { bootstrapSession, selectIsAuthenticated, sessionExpired } from '@/features/auth/authSlice';
-import { clearCart, fetchCart } from '@/features/cart/cartSlice';
+import { loadGuestCart, mergeGuestCart } from '@/features/cart/cartSlice';
 import { clearAddresses } from '@/features/address/addressSlice';
 
 function App() {
@@ -45,11 +45,12 @@ function App() {
   }, [dispatch]);
 
   // Dados por usuario (carrinho, enderecos): carregam ao autenticar, limpam ao sair.
+  // O carrinho do visitante (navegador) entra no da conta ao autenticar.
   useEffect(() => {
     if (isAuthenticated) {
-      dispatch(fetchCart());
+      dispatch(mergeGuestCart());
     } else {
-      dispatch(clearCart());
+      dispatch(loadGuestCart());
       dispatch(clearAddresses());
     }
   }, [isAuthenticated, dispatch]);
@@ -66,8 +67,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/trocas-e-devolucoes" element={<TrocasDevolucoes />} />
+          <Route path="/carrinho" element={<Carrinho />} />
           <Route element={<ProtectedRoute />}>
-            <Route path="/carrinho" element={<Carrinho />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/checkout/retorno" element={<CheckoutRetorno />} />
             <Route path="/conta" element={<Conta />} />

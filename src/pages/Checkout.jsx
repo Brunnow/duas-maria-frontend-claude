@@ -3,13 +3,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link, Navigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
+import Spinner from '@/components/ui/Spinner';
 import StepNav from '@/components/checkout/StepNav';
 import AddressPicker from '@/components/checkout/AddressPicker';
 import ShippingStep from '@/components/checkout/ShippingStep';
 import CouponField from '@/components/checkout/CouponField';
 import OrderReview from '@/components/checkout/OrderReview';
 import { useFetch } from '@/hooks/useFetch';
-import { selectCartItems } from '@/features/cart/cartSlice';
+import { selectCart, selectCartItems } from '@/features/cart/cartSlice';
 import { fetchAddresses, selectAddresses } from '@/features/address/addressSlice';
 import { createOrder, startMercadoPagoPayment } from '@/services/orderService';
 import { getShippingOptions } from '@/services/shippingService';
@@ -28,6 +29,7 @@ const STEPS = ['Endereço', 'Frete', 'Revisão'];
 export default function Checkout() {
   const dispatch = useDispatch();
   const items = useSelector(selectCartItems);
+  const cart = useSelector(selectCart);
   const addresses = useSelector(selectAddresses);
 
   const [step, setStep] = useState(0);
@@ -82,6 +84,16 @@ export default function Checkout() {
     ? shippingServiceId
     : (options[0]?.serviceId ?? null);
   const selectedShippingOption = options.find((o) => o.serviceId === effectiveShippingServiceId);
+
+  // Logo depois do login o carrinho do visitante ainda esta indo para o
+  // backend: espera, senao o "carrinho vazio" abaixo manda de volta.
+  if (!pendingOrder && (cart.owner !== 'user' || ['idle', 'loading'].includes(cart.status))) {
+    return (
+      <Container className="flex justify-center py-24 text-muted">
+        <Spinner className="size-6" />
+      </Container>
+    );
+  }
 
   // Carrinho vazio e nenhum pedido pendente de pagamento -> volta para o carrinho.
   if (!pendingOrder && items.length === 0) {

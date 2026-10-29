@@ -108,7 +108,7 @@ export default function LaunchPromo() {
   return (
     <aside
       aria-label="Lançamento do site"
-      className="fixed inset-x-4 bottom-24 z-40 animate-fade-in rounded-card border border-border bg-surface p-5 shadow-pop sm:inset-x-auto sm:bottom-5 sm:left-5 sm:w-80"
+      className="fixed inset-x-4 bottom-[calc(var(--buy-bar-h,0px)+6rem)] z-40 animate-fade-in rounded-card border border-border bg-surface p-5 shadow-pop sm:inset-x-auto sm:bottom-[calc(var(--buy-bar-h,0px)+1.25rem)] sm:left-5 sm:w-80"
     >
       <button
         type="button"

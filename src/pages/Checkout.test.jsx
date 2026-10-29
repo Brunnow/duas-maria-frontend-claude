@@ -51,13 +51,13 @@ const ADDRESS = {
   state: 'PE',
 };
 
-function renderCheckout({ items = [ITEM], addresses = [ADDRESS] } = {}) {
+function renderCheckout({ items = [ITEM], addresses = [ADDRESS], cart = {} } = {}) {
   // O mount do Checkout dispara fetchAddresses; devolver a MESMA lista
   // evita que a store seja zerada durante o teste.
   getUserAddresses.mockResolvedValue(addresses);
   const store = makeStore({
     ...authenticatedAuth,
-    ...cartState(items),
+    ...cartState(items, cart),
     address: { items: addresses, status: 'ready', error: null },
   });
   render(
@@ -98,6 +98,22 @@ describe('Checkout', () => {
   it('redireciona para o carrinho quando esta vazio', () => {
     renderCheckout({ items: [] });
     expect(screen.getByText('Pagina do carrinho')).toBeInTheDocument();
+  });
+
+  it('logo depois do login espera o carrinho do visitante entrar na conta', async () => {
+    // Ainda o carrinho do navegador (vazio para o servidor): nao pode mandar
+    // de volta para /carrinho; quando o merge termina, segue o checkout.
+    const store = renderCheckout({ items: [], cart: { owner: 'guest', status: 'loading' } });
+    expect(screen.queryByText('Pagina do carrinho')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Continuar' })).toBeNull();
+
+    store.dispatch({
+      type: 'cart/mergeGuest/fulfilled',
+      payload: { cart: { cartId: 1, totalPrice: 199.9, items: [ITEM] }, skipped: 0 },
+    });
+
+    expect(await screen.findByRole('button', { name: 'Continuar' })).toBeInTheDocument();
+    expect(screen.queryByText('Pagina do carrinho')).toBeNull();
   });
 
   it('com um unico endereco, ele ja vem escolhido e o Continuar fica ativo', async () => {
