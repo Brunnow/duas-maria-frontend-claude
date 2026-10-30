@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { authenticatedAuth, cartState, makeStore } from '@/test/renderWithProviders';
@@ -17,6 +17,7 @@ vi.mock('@/services/addressService', () => ({
   deleteAddress: vi.fn(),
 }));
 vi.mock('@/lib/navigate', () => ({ goToExternal: vi.fn() }));
+vi.mock('@/lib/pixel', async (importOriginal) => ({ ...(await importOriginal()), track: vi.fn() }));
 
 import { getUserAddresses } from '@/services/addressService';
 
@@ -24,6 +25,7 @@ import { createOrder, startMercadoPagoPayment } from '@/services/orderService';
 import { getShippingOptions } from '@/services/shippingService';
 import { validateCoupon } from '@/services/couponService';
 import { goToExternal } from '@/lib/navigate';
+import { track } from '@/lib/pixel';
 import Checkout from './Checkout';
 
 const ITEM = {
@@ -83,6 +85,7 @@ const goThroughSteps = async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.sessionStorage.clear();
   getShippingOptions.mockResolvedValue([
     {
       serviceId: 'FIXED_UF',
@@ -440,5 +443,162 @@ describe('Checkout', () => {
 
     await waitFor(() => expect(startMercadoPagoPayment).toHaveBeenCalledWith(42));
     await waitFor(() => expect(goToExternal).toHaveBeenCalledWith('https://mp/retry'));
+  });
+});
+
+describe('Checkout: eventos do Pixel', () => {
+  const calls = (event) => track.mock.calls.filter(([name]) => name === event);
+  const CART_PARAMS = {
+    content_type: 'product',
+    content_ids: ['2'],
+    value: 259.9,
+    currency: 'BRL',
+    num_items: 1,
+  };
+  const ORDER_OK = {
+    order: { orderId: 99, orderStatus: 'AGUARDANDO_PAGAMENTO', paymentStatus: 'PENDING' },
+    initPoint: 'https://mp/pay',
+    paymentInitFailed: false,
+  };
+  const pay = () => fireEvent.click(screen.getByRole('button', { name: 'Ir para o pagamento' }));
+
+  it('InitiateCheckout dispara uma vez ao abrir o checkout, com o carrinho pronto', async () => {
+    renderCheckout();
+    await screen.findByRole('button', { name: 'Continuar' });
+
+    expect(calls('InitiateCheckout')).toEqual([['InitiateCheckout', CART_PARAMS]]);
+    // re-renders (passos, frete cotado) nao repetem
+    await goThroughSteps();
+    expect(calls('InitiateCheckout')).toHaveLength(1);
+  });
+
+  it('nao dispara enquanto o carrinho do visitante ainda esta indo para a conta', () => {
+    renderCheckout({ items: [], cart: { owner: 'guest', status: 'loading' } });
+    expect(calls('InitiateCheckout')).toHaveLength(0);
+  });
+
+  it('voltar ao checkout (F5, volta do Mercado Pago) com o mesmo carrinho nao repete', async () => {
+    renderCheckout();
+    await screen.findByRole('button', { name: 'Continuar' });
+    cleanup();
+
+    renderCheckout();
+    await screen.findByRole('button', { name: 'Continuar' });
+
+    expect(calls('InitiateCheckout')).toHaveLength(1);
+  });
+
+  it('carrinho mudou de verdade (quantidade) = novo InitiateCheckout', async () => {
+    const store = renderCheckout();
+    await screen.findByRole('button', { name: 'Continuar' });
+
+    act(() => {
+      store.dispatch({
+        type: 'cart/increment/fulfilled',
+        payload: {
+          owner: 'user',
+          cart: { cartId: 1, items: [{ ...ITEM, quantity: 2, lineTotal: 519.8 }] },
+        },
+      });
+    });
+
+    await waitFor(() => expect(calls('InitiateCheckout')).toHaveLength(2));
+    expect(calls('InitiateCheckout')[1][1]).toMatchObject({ value: 519.8, num_items: 2 });
+  });
+
+  it('clicar em pagar nao dispara InitiateCheckout; AddPaymentInfo so depois do pedido criado', async () => {
+    let resolveOrder;
+    createOrder.mockReturnValue(
+      new Promise((resolve) => {
+        resolveOrder = resolve;
+      }),
+    );
+    renderCheckout();
+    await goThroughSteps();
+    pay();
+
+    // pedido ainda sendo criado: nada alem do InitiateCheckout da abertura
+    await waitFor(() => expect(createOrder).toHaveBeenCalled());
+    expect(calls('AddPaymentInfo')).toHaveLength(0);
+    expect(calls('InitiateCheckout')).toHaveLength(1);
+
+    await act(async () => resolveOrder(ORDER_OK));
+
+    await waitFor(() => expect(goToExternal).toHaveBeenCalledWith('https://mp/pay'));
+    expect(calls('AddPaymentInfo')).toEqual([['AddPaymentInfo', CART_PARAMS]]);
+    expect(calls('InitiateCheckout')).toHaveLength(1);
+  });
+
+  it('AddPaymentInfo leva o desconto dos cupons no value', async () => {
+    validateCoupon.mockResolvedValue({
+      code: 'PROMO10',
+      discountType: 'PERCENT',
+      discountValue: 10,
+      discountAmount: 25.99,
+      subtotal: 259.9,
+      subtotalAfterDiscount: 233.91,
+    });
+    createOrder.mockResolvedValue(ORDER_OK);
+    renderCheckout();
+    await goThroughSteps();
+    fireEvent.change(screen.getByLabelText('Cupom de desconto'), { target: { value: 'PROMO10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
+    expect(await screen.findByText(/aplicado — desconto de/)).toBeInTheDocument();
+    pay();
+
+    await waitFor(() => expect(calls('AddPaymentInfo')).toHaveLength(1));
+    expect(calls('AddPaymentInfo')[0][1].value).toBe(233.91);
+  });
+
+  it('erro ao criar o pedido (409, 400, rede) e nova tentativa: sem AddPaymentInfo e sem repetir InitiateCheckout', async () => {
+    createOrder
+      .mockRejectedValueOnce({
+        response: { status: 409, data: { message: 'Sem estoque', unavailableItems: [] } },
+      })
+      .mockRejectedValueOnce({ response: { status: 400, data: { message: 'Cupom expirado.' } } })
+      .mockRejectedValueOnce(new Error('Network Error'))
+      .mockResolvedValueOnce(ORDER_OK);
+    renderCheckout();
+    await goThroughSteps();
+
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      pay();
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(attempt));
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Ir para o pagamento' })).not.toBeDisabled(),
+      );
+    }
+    expect(calls('AddPaymentInfo')).toHaveLength(0);
+    expect(goToExternal).not.toHaveBeenCalled();
+
+    pay(); // a quarta da certo
+    await waitFor(() => expect(goToExternal).toHaveBeenCalledWith('https://mp/pay'));
+    expect(calls('AddPaymentInfo')).toHaveLength(1);
+    expect(calls('InitiateCheckout')).toHaveLength(1);
+  });
+
+  it('pedido criado mas o Mercado Pago falhou: AddPaymentInfo so quando o retry abre o pagamento', async () => {
+    createOrder.mockResolvedValue({
+      order: { orderId: 42, orderStatus: 'AGUARDANDO_PAGAMENTO', paymentStatus: 'PENDING' },
+      initPoint: null,
+      paymentInitFailed: true,
+    });
+    startMercadoPagoPayment
+      .mockRejectedValueOnce(new Error('MP fora'))
+      .mockResolvedValueOnce({ preferenceId: 'p1', initPoint: 'https://mp/retry' });
+    renderCheckout();
+    await goThroughSteps();
+    pay();
+    await screen.findByText(/#42/);
+    expect(calls('AddPaymentInfo')).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar pagamento' }));
+    expect(await screen.findByText(/Ainda não foi possível iniciar/)).toBeInTheDocument();
+    expect(calls('AddPaymentInfo')).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar pagamento' }));
+    await waitFor(() => expect(goToExternal).toHaveBeenCalledWith('https://mp/retry'));
+    expect(calls('AddPaymentInfo')).toHaveLength(1);
+    expect(calls('InitiateCheckout')).toHaveLength(1);
   });
 });

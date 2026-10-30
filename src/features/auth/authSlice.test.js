@@ -1,4 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { configureStore } from '@reduxjs/toolkit';
+
+vi.mock('@/services/authService', () => ({
+  currentUser: vi.fn(),
+  signin: vi.fn(),
+  signup: vi.fn(),
+  signout: vi.fn(),
+}));
+
+import { signout } from '@/services/authService';
 import reducer, { bootstrapSession, login, logout, sessionExpired } from './authSlice';
 
 const initial = reducer(undefined, { type: '@@INIT' });
@@ -48,5 +58,25 @@ describe('authSlice', () => {
       roles: [],
       status: 'anonymous',
     });
+  });
+
+  it.each([
+    ['sucesso', () => signout.mockResolvedValue('ok')],
+    ['erro de rede', () => signout.mockRejectedValue(new Error('Network Error'))],
+  ])('logout (%s) apaga o carrinho de visitante deste navegador', async (_, arrange) => {
+    arrange();
+    window.localStorage.setItem(
+      'dm-guest-cart',
+      JSON.stringify([{ productId: 2, variantId: 7, quantity: 1 }]),
+    );
+    window.localStorage.setItem('outra-chave', 'fica');
+    const store = configureStore({ reducer: { auth: reducer } });
+
+    await store.dispatch(logout());
+
+    expect(window.localStorage.getItem('dm-guest-cart')).toBeNull();
+    expect(window.localStorage.getItem('outra-chave')).toBe('fica');
+    expect(store.getState().auth.status).toBe('anonymous');
+    window.localStorage.clear();
   });
 });

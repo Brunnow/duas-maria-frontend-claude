@@ -145,6 +145,11 @@ export default function Produto() {
     // no checkout. `item` é o que o carrinho do visitante mostra.
     setAdding(true);
     setFeedback(null);
+    // Mesmo preço que a página mostra e o carrinho guarda (Price/isOnSale):
+    // o value do AddToCart bate com o carrinho.
+    const unitPrice = money(
+      isOnSale(product.price, product.specialPrice) ? product.specialPrice : product.price,
+    );
     try {
       await dispatch(
         addToCart({
@@ -156,14 +161,11 @@ export default function Produto() {
             image: galleryImages[0]?.url || product.image,
             color: selectedVariant.color || selectedColor,
             size: selectedVariant.size,
-            unitPrice: isOnSale(product.price, product.specialPrice)
-              ? product.specialPrice
-              : product.price,
+            unitPrice,
             stock: selectedVariant.stock,
           },
         }),
       ).unwrap();
-      const unitPrice = money(product.specialPrice ?? product.price);
       track('AddToCart', {
         content_type: 'product',
         content_ids: [String(product.productId)],

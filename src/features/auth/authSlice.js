@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import * as authService from '@/services/authService';
+import { clearGuestCart } from '@/lib/guestCart';
 
 /*
  * Estado de autenticacao. Feature nova -> Redux Toolkit (convencao do
@@ -56,6 +57,9 @@ export const register = createAsyncThunk('auth/register', async (data, { rejectW
 });
 
 export const logout = createAsyncThunk('auth/logout', async () => {
+  // Carrinho de visitante que tenha sobrado neste navegador (ex.: sessao caiu
+  // no meio e a peca foi guardada como visitante) nao fica para a proxima pessoa.
+  clearGuestCart();
   try {
     await authService.signout();
   } catch {

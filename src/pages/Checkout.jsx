@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, Navigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
@@ -19,6 +19,50 @@ import { money, track } from '@/lib/pixel';
 import { variantLabel } from '@/lib/variants';
 
 const STEPS = ['Endereço', 'Frete', 'Revisão'];
+
+// Pixel: assinatura do carrinho que já teve InitiateCheckout nesta aba — F5,
+// erro, nova tentativa ou volta do Mercado Pago não contam o checkout de novo.
+const CHECKOUT_TRACKED_KEY = 'dm-pixel-checkout';
+
+/** Muda só quando muda produto, tamanho ou quantidade de alguma linha. */
+function cartSignature(items) {
+  return items
+    .map((item) => `${item.productId}:${item.variantId}:${item.size}:${item.quantity}`)
+    .sort()
+    .join('|');
+}
+
+function readTrackedCheckout() {
+  try {
+    return window.sessionStorage.getItem(CHECKOUT_TRACKED_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function rememberTrackedCheckout(signature) {
+  try {
+    window.sessionStorage.setItem(CHECKOUT_TRACKED_KEY, signature);
+  } catch {
+    // Sem armazenamento: o ref ainda segura os re-renders desta tela.
+  }
+}
+
+/**
+ * Parâmetros do InitiateCheckout/AddPaymentInfo. Valor no mesmo critério do
+ * Purchase: produtos com os cupons já descontados, sem o frete.
+ */
+function pixelCartParams(items, coupons = []) {
+  const subtotal = items.reduce((sum, item) => sum + money(item.lineTotal), 0);
+  const couponDiscount = coupons.reduce((sum, c) => sum + money(c.discountAmount), 0);
+  return {
+    content_type: 'product',
+    content_ids: [...new Set(items.map((item) => String(item.productId)))],
+    value: money(Math.max(subtotal - couponDiscount, 0)),
+    currency: 'BRL',
+    num_items: items.reduce((sum, item) => sum + (item.quantity ?? 0), 0),
+  };
+}
 
 /*
  * Rota protegida (ver App.jsx). Ao confirmar, cria o pedido e redireciona ao
@@ -85,6 +129,21 @@ export default function Checkout() {
     : (options[0]?.serviceId ?? null);
   const selectedShippingOption = options.find((o) => o.serviceId === effectiveShippingServiceId);
 
+  // Pixel: InitiateCheckout quando o checkout abre com o carrinho da conta
+  // pronto — uma vez por carrinho (ref para os re-renders, sessionStorage para
+  // F5/volta do Mercado Pago). Carrinho mudou de verdade = novo checkout.
+  const cartReady = cart.owner === 'user' && cart.status === 'ready' && items.length > 0;
+  const trackedCheckoutRef = useRef(null);
+  useEffect(() => {
+    if (!cartReady) return;
+    const signature = cartSignature(items);
+    if (trackedCheckoutRef.current === signature) return;
+    trackedCheckoutRef.current = signature;
+    if (readTrackedCheckout() === signature) return;
+    rememberTrackedCheckout(signature);
+    track('InitiateCheckout', pixelCartParams(items));
+  }, [cartReady, items]);
+
   // Logo depois do login o carrinho do visitante ainda esta indo para o
   // backend: espera, senao o "carrinho vazio" abaixo manda de volta.
   if (!pendingOrder && (cart.owner !== 'user' || ['idle', 'loading'].includes(cart.status))) {
@@ -105,6 +164,7 @@ export default function Checkout() {
     setError(null);
     try {
       const { initPoint } = await startMercadoPagoPayment(pendingOrder.orderId);
+      track('AddPaymentInfo', pixelCartParams(items, coupons));
       goToExternal(initPoint);
     } catch {
       setError('Ainda não foi possível iniciar o pagamento. Tente novamente em instantes.');
@@ -141,17 +201,6 @@ export default function Checkout() {
     (step === 0 && effectiveAddressId != null) || (step === 1 && shippingReady) || step === 2;
 
   const handleConfirm = async () => {
-    // Pixel: o clique que leva ao Mercado Pago. Valor no mesmo critério do
-    // Purchase: produtos com os cupons já descontados, sem o frete.
-    const subtotal = items.reduce((sum, item) => sum + money(item.lineTotal), 0);
-    const couponDiscount = coupons.reduce((sum, c) => sum + money(c.discountAmount), 0);
-    track('InitiateCheckout', {
-      content_type: 'product',
-      content_ids: [...new Set(items.map((item) => String(item.productId)))],
-      value: money(Math.max(subtotal - couponDiscount, 0)),
-      currency: 'BRL',
-      num_items: items.reduce((sum, item) => sum + (item.quantity ?? 0), 0),
-    });
     setPlacing(true);
     setError(null);
     setShortage(null);
@@ -166,6 +215,9 @@ export default function Checkout() {
         setError('Pedido criado, mas não foi possível iniciar o pagamento agora.');
         return;
       }
+      // Pixel: pedido criado e pagamento iniciado — nunca antes (erro de
+      // estoque/cupom/rede não conta). Uma vez por tentativa que deu certo.
+      track('AddPaymentInfo', pixelCartParams(items, coupons));
       goToExternal(initPoint);
     } catch (err) {
       const status = err?.response?.status;
