@@ -28,6 +28,7 @@ const groups = [
   {
     title: 'Ajuda',
     links: [
+      { label: 'Acompanhar pedido', to: '/acompanhar-pedido' },
       { label: 'Trocas e devoluções', to: RETURN_POLICY_PATH },
       { label: 'Envio e prazos', href: WHATSAPP_URL },
       { label: 'Fale conosco', href: WHATSAPP_URL },

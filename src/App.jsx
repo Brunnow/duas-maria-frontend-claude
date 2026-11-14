@@ -16,6 +16,8 @@ import CheckoutRetorno from '@/pages/CheckoutRetorno';
 import Conta from '@/pages/Conta';
 import Pedidos from '@/pages/Pedidos';
 import PedidoDetalhe from '@/pages/PedidoDetalhe';
+import AcompanharPedido from '@/pages/AcompanharPedido';
+import PedidosPorLink from '@/pages/PedidosPorLink';
 import NotFound from '@/pages/NotFound';
 import TrocasDevolucoes from '@/pages/TrocasDevolucoes';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -68,6 +70,8 @@ function App() {
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/trocas-e-devolucoes" element={<TrocasDevolucoes />} />
           <Route path="/carrinho" element={<Carrinho />} />
+          <Route path="/acompanhar-pedido" element={<AcompanharPedido />} />
+          <Route path="/acompanhar-pedido/:token" element={<PedidosPorLink />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/checkout/retorno" element={<CheckoutRetorno />} />

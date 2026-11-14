@@ -1,28 +1,13 @@
 import { useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import OrderDetailView from '@/components/orders/OrderDetailView';
 import { useFetch } from '@/hooks/useFetch';
 import { fetchOrderById } from '@/services/orderService';
-import { formatCurrency, formatDateTime } from '@/lib/format';
-import { orderStatusLabel, orderStatusTone } from '@/lib/orderStatus';
-import {
-  LOCAL_DELIVERY_HINT,
-  LOCAL_DELIVERY_METHOD,
-  formatShipping,
-  shippingOptionLabel,
-  trackingStatusLabel,
-  trackingStatusTone,
-} from '@/lib/shipping';
-import { productImageUrl } from '@/lib/media';
-import { addressLines } from '@/lib/address';
-import OptimizedImage from '@/components/shared/OptimizedImage';
-import { returnItemLine, returnRefundText, returnTitle } from '@/lib/orderReturns';
-import { RETURN_POLICY_PATH } from '@/lib/returnPolicy';
 
 // Mesma resposta (404) para "pedido inexistente" e "pedido de outro
 // usuário" — tratamos as duas como "não encontrado" com uma mensagem
@@ -71,151 +56,7 @@ export default function PedidoDetalhe() {
       ) : !order ? (
         <EmptyState className="mt-6" title="Pedido não encontrado" />
       ) : (
-        <>
-          <header className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="font-display text-2xl text-foreground">Pedido #{order.orderId}</h1>
-              <p className="text-sm text-muted">Feito em {formatDateTime(order.createdAt)}</p>
-            </div>
-            <Badge tone={orderStatusTone(order.orderStatus)}>
-              {orderStatusLabel(order.orderStatus)}
-            </Badge>
-          </header>
-
-          <ul className="mt-8 flex flex-col divide-y divide-border border-y border-border">
-            {(order.orderItems || []).map((item) => {
-              const subtotal = (item.quantity ?? 0) * (item.orderedProductPrice ?? 0);
-              return (
-                <li key={item.orderItemId} className="flex items-center gap-4 py-4">
-                  <div className="h-16 w-13 shrink-0 overflow-hidden rounded-card bg-subtle">
-                    {item.product?.image && (
-                      <OptimizedImage
-                        src={productImageUrl(item.product.image)}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {item.product?.productName || 'Produto'}
-                    </p>
-                    <p className="text-xs text-muted">
-                      {item.color && <>Cor {item.color} · </>}
-                      {item.size && <>Tamanho {item.size} · </>}
-                      Qtd. {item.quantity} · {formatCurrency(item.orderedProductPrice)} cada
-                    </p>
-                  </div>
-                  <p className="shrink-0 text-sm font-medium text-foreground">
-                    {formatCurrency(subtotal)}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-
-          {order.returns?.length > 0 && (
-            <section className="mt-8 text-sm">
-              <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                Trocas e devoluções
-              </p>
-              <ol className="mt-2 space-y-3 text-muted">
-                {order.returns.map((r) => (
-                  <li key={r.id}>
-                    <span className="text-foreground">{returnTitle(r)} registrada</span> em{' '}
-                    {formatDateTime(r.createdAt)}
-                    {r.items.map((i) => (
-                      <span key={i.orderItemId} className="block">
-                        {returnItemLine(i)}
-                      </span>
-                    ))}
-                    {returnRefundText(r) && <span className="block">{returnRefundText(r)}</span>}
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
-
-          {order.orderStatus === 'ENTREGUE' && (
-            <p className="mt-8 text-sm text-muted">
-              Precisa trocar ou devolver?{' '}
-              <Link
-                to={RETURN_POLICY_PATH}
-                className="text-foreground underline underline-offset-4 hover:text-accent"
-              >
-                Veja como funciona
-              </Link>
-              .
-            </p>
-          )}
-
-          {addressLines(order.shippingAddress).length > 0 && (
-            <section className="mt-8 text-sm">
-              <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                Entrega
-              </p>
-              <div className="mt-1 text-muted">
-                {addressLines(order.shippingAddress).map((line) => (
-                  <p key={line}>{line}</p>
-                ))}
-              </div>
-              {order.shippingMethod === LOCAL_DELIVERY_METHOD &&
-                !['ENTREGUE', 'CANCELADO'].includes(order.orderStatus) && (
-                  <p className="mt-2 text-muted">Entrega local grátis. {LOCAL_DELIVERY_HINT}</p>
-                )}
-            </section>
-          )}
-
-          {order.shippingTrackingCode && (
-            <section className="mt-8 text-sm">
-              <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                Rastreio
-              </p>
-              <div className="mt-2 flex flex-col gap-1.5">
-                <Badge tone={trackingStatusTone(order.melhorEnvioStatus)} className="w-fit">
-                  {trackingStatusLabel(order.melhorEnvioStatus)}
-                </Badge>
-                <div className="text-muted">
-                  <p>Código: {order.shippingTrackingCode}</p>
-                  {order.shippingDeliveredAt ? (
-                    <p>Entregue em {formatDateTime(order.shippingDeliveredAt)}</p>
-                  ) : (
-                    order.shippingPostedAt && (
-                      <p>Postado em {formatDateTime(order.shippingPostedAt)}</p>
-                    )
-                  )}
-                </div>
-              </div>
-            </section>
-          )}
-
-          <div className="mt-6 flex justify-end">
-            <div className="w-full max-w-xs space-y-1 text-sm">
-              {order.discountAmount != null && Number(order.discountAmount) > 0 && (
-                <div className="flex justify-between text-muted">
-                  <span>Desconto{order.couponCode ? ` · ${order.couponCode}` : ''}</span>
-                  <span>−{formatCurrency(order.discountAmount)}</span>
-                </div>
-              )}
-              {order.shippingAmount != null && (
-                <div className="flex justify-between text-muted">
-                  <span>
-                    Frete ·{' '}
-                    {shippingOptionLabel({
-                      carrierName: order.shippingCarrierName,
-                      serviceName: order.shippingServiceName,
-                    })}
-                  </span>
-                  <span>{formatShipping(order.shippingAmount)}</span>
-                </div>
-              )}
-              <div className="flex justify-between border-t border-border pt-1 font-medium text-foreground">
-                <span>Total</span>
-                <span>{formatCurrency(order.totalAmount)}</span>
-              </div>
-            </div>
-          </div>
-        </>
+        <OrderDetailView order={order} />
       )}
     </Container>
   );

@@ -118,6 +118,13 @@ export default function Login() {
             Entrar
           </Button>
         </form>
+
+        <p className="mt-6 text-sm text-muted">
+          Comprou sem cadastro?{' '}
+          <Link to="/acompanhar-pedido" className="text-accent hover:underline">
+            Acompanhe seu pedido
+          </Link>
+        </p>
       </div>
     </Container>
   );
