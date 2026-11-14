@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
 import Spinner from '@/components/ui/Spinner';
@@ -9,68 +9,53 @@ import AddressPicker from '@/components/checkout/AddressPicker';
 import ShippingStep from '@/components/checkout/ShippingStep';
 import CouponField from '@/components/checkout/CouponField';
 import OrderReview from '@/components/checkout/OrderReview';
+import StockShortage from '@/components/checkout/StockShortage';
+import GuestCheckout from '@/components/checkout/GuestCheckout';
 import { useFetch } from '@/hooks/useFetch';
 import { selectCart, selectCartItems } from '@/features/cart/cartSlice';
 import { fetchAddresses, selectAddresses } from '@/features/address/addressSlice';
 import { createOrder, startMercadoPagoPayment } from '@/services/orderService';
 import { getShippingOptions } from '@/services/shippingService';
 import { goToExternal } from '@/lib/navigate';
-import { money, track } from '@/lib/pixel';
-import { variantLabel } from '@/lib/variants';
+import { track } from '@/lib/pixel';
+import { pixelCartParams, useInitiateCheckout } from '@/lib/checkoutPixel';
+import { selectAuth } from '@/features/auth/authSlice';
 
 const STEPS = ['Endereço', 'Frete', 'Revisão'];
 
-// Pixel: assinatura do carrinho que já teve InitiateCheckout nesta aba — F5,
-// erro, nova tentativa ou volta do Mercado Pago não contam o checkout de novo.
-const CHECKOUT_TRACKED_KEY = 'dm-pixel-checkout';
-
-/** Muda só quando muda produto, tamanho ou quantidade de alguma linha. */
-function cartSignature(items) {
-  return items
-    .map((item) => `${item.productId}:${item.variantId}:${item.size}:${item.quantity}`)
-    .sort()
-    .join('|');
-}
-
-function readTrackedCheckout() {
-  try {
-    return window.sessionStorage.getItem(CHECKOUT_TRACKED_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function rememberTrackedCheckout(signature) {
-  try {
-    window.sessionStorage.setItem(CHECKOUT_TRACKED_KEY, signature);
-  } catch {
-    // Sem armazenamento: o ref ainda segura os re-renders desta tela.
-  }
-}
-
-/**
- * Parâmetros do InitiateCheckout/AddPaymentInfo. Valor no mesmo critério do
- * Purchase: produtos com os cupons já descontados, sem o frete.
- */
-function pixelCartParams(items, coupons = []) {
-  const subtotal = items.reduce((sum, item) => sum + money(item.lineTotal), 0);
-  const couponDiscount = coupons.reduce((sum, c) => sum + money(c.discountAmount), 0);
-  return {
-    content_type: 'product',
-    content_ids: [...new Set(items.map((item) => String(item.productId)))],
-    value: money(Math.max(subtotal - couponDiscount, 0)),
-    currency: 'BRL',
-    num_items: items.reduce((sum, item) => sum + (item.quantity ?? 0), 0),
-  };
+function CheckoutSpinner() {
+  return (
+    <Container className="flex justify-center py-24 text-muted">
+      <Spinner className="size-6" />
+    </Container>
+  );
 }
 
 /*
- * Rota protegida (ver App.jsx). Ao confirmar, cria o pedido e redireciona ao
+ * /checkout é público: quem está logado usa o checkout da conta (endereços
+ * salvos); quem não está compra sem cadastro (GuestCheckout), com o carrinho
+ * deste navegador.
+ */
+export default function Checkout() {
+  const authStatus = useSelector(selectAuth).status;
+  const cart = useSelector(selectCart);
+  const items = useSelector(selectCartItems);
+
+  if (authStatus === 'idle' || authStatus === 'loading') return <CheckoutSpinner />;
+  if (authStatus === 'authenticated') return <AccountCheckout />;
+
+  if (['idle', 'loading'].includes(cart.status)) return <CheckoutSpinner />;
+  if (items.length === 0) return <Navigate to="/carrinho" replace />;
+  return <GuestCheckout items={items} cartReady={cart.status === 'ready'} />;
+}
+
+/*
+ * Checkout de quem está logado. Ao confirmar, cria o pedido e redireciona ao
  * Checkout Pro do Mercado Pago — a escolha entre Pix/cartão/boleto acontece
  * lá, não aqui. A confirmação do pagamento chega pelo webhook; esta tela não
  * espera por ela (ver /checkout/retorno).
  */
-export default function Checkout() {
+function AccountCheckout() {
   const dispatch = useDispatch();
   const items = useSelector(selectCartItems);
   const cart = useSelector(selectCart);
@@ -133,25 +118,12 @@ export default function Checkout() {
   // pronto — uma vez por carrinho (ref para os re-renders, sessionStorage para
   // F5/volta do Mercado Pago). Carrinho mudou de verdade = novo checkout.
   const cartReady = cart.owner === 'user' && cart.status === 'ready' && items.length > 0;
-  const trackedCheckoutRef = useRef(null);
-  useEffect(() => {
-    if (!cartReady) return;
-    const signature = cartSignature(items);
-    if (trackedCheckoutRef.current === signature) return;
-    trackedCheckoutRef.current = signature;
-    if (readTrackedCheckout() === signature) return;
-    rememberTrackedCheckout(signature);
-    track('InitiateCheckout', pixelCartParams(items));
-  }, [cartReady, items]);
+  useInitiateCheckout(cartReady, items);
 
   // Logo depois do login o carrinho do visitante ainda esta indo para o
   // backend: espera, senao o "carrinho vazio" abaixo manda de volta.
   if (!pendingOrder && (cart.owner !== 'user' || ['idle', 'loading'].includes(cart.status))) {
-    return (
-      <Container className="flex justify-center py-24 text-muted">
-        <Spinner className="size-6" />
-      </Container>
-    );
+    return <CheckoutSpinner />;
   }
 
   // Carrinho vazio e nenhum pedido pendente de pagamento -> volta para o carrinho.
@@ -275,25 +247,7 @@ export default function Checkout() {
         )}
       </div>
 
-      {shortage && (
-        <div
-          role="alert"
-          className="mt-6 rounded-card border border-danger/30 bg-danger/5 p-4 text-sm"
-        >
-          <p className="font-medium text-danger">Alguns itens ficaram sem estoque suficiente:</p>
-          <ul className="mt-2 list-disc pl-5 text-muted">
-            {shortage.map((item) => (
-              <li key={item.variantId}>
-                {item.productName} ({variantLabel(item.color, item.size)}) — pedido {item.requested}
-                , disponível {item.available}
-              </li>
-            ))}
-          </ul>
-          <Button as={Link} to="/carrinho" variant="secondary" size="sm" className="mt-3">
-            Revisar carrinho
-          </Button>
-        </div>
-      )}
+      {shortage && <StockShortage items={shortage} />}
 
       {error && (
         <p role="alert" className="mt-6 text-sm text-danger">

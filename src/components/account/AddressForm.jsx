@@ -46,7 +46,22 @@ function pickFields(address) {
   return picked;
 }
 
-export default function AddressForm({ initial, onSubmit, onCancel, submitting = false }) {
+/*
+ * Formulário de endereço da conta. No checkout sem cadastro também recebe
+ * campos extras no topo (`leading`, ex.: e-mail), validados junto pelo
+ * `validateExtra` (devolve true se estiver tudo certo), outro texto no botão
+ * e o telefone como WhatsApp.
+ */
+export default function AddressForm({
+  initial,
+  onSubmit,
+  onCancel,
+  submitting = false,
+  submitLabel = 'Salvar endereço',
+  phoneLabel = 'Telefone',
+  leading = null,
+  validateExtra,
+}) {
   const [values, setValues] = useState(() => ({ ...EMPTY, ...pickFields(initial) }));
   const [errors, setErrors] = useState({});
   const [cepStatus, setCepStatus] = useState(null); // null | 'loading' | 'notFound' | 'network'
@@ -97,7 +112,8 @@ export default function AddressForm({ initial, onSubmit, onCancel, submitting = 
     event.preventDefault();
     const found = validateForm(values, schema);
     setErrors(found);
-    if (Object.keys(found).length === 0) onSubmit({ ...values });
+    const extraOk = validateExtra ? validateExtra() : true;
+    if (Object.keys(found).length === 0 && extraOk) onSubmit({ ...values });
   };
 
   const cepHint =
@@ -111,6 +127,7 @@ export default function AddressForm({ initial, onSubmit, onCancel, submitting = 
 
   return (
     <form onSubmit={handleSubmit} noValidate className="grid gap-4 sm:grid-cols-2">
+      {leading}
       <div className="sm:col-span-2">
         <Input
           label="Nome de quem vai receber"
@@ -121,7 +138,7 @@ export default function AddressForm({ initial, onSubmit, onCancel, submitting = 
         />
       </div>
       <Input
-        label="Telefone"
+        label={phoneLabel}
         name="phone"
         inputMode="tel"
         placeholder="(81) 91234-5678"
@@ -200,11 +217,13 @@ export default function AddressForm({ initial, onSubmit, onCancel, submitting = 
 
       <div className="flex gap-3 sm:col-span-2">
         <Button type="submit" loading={submitting}>
-          Salvar endereço
+          {submitLabel}
         </Button>
-        <Button type="button" variant="ghost" onClick={onCancel}>
-          Cancelar
-        </Button>
+        {onCancel && (
+          <Button type="button" variant="ghost" onClick={onCancel}>
+            Cancelar
+          </Button>
+        )}
       </div>
     </form>
   );

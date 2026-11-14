@@ -3,7 +3,8 @@ import Button from '@/components/ui/Button';
 import { formatCurrency } from '@/lib/format';
 import { formatShipping, shippingOptionLabel } from '@/lib/shipping';
 
-export default function OrderConfirmation({ order }) {
+/** `detailsTo`: onde ver o pedido (área logada, ou o link "Meus pedidos" de quem não tem conta). */
+export default function OrderConfirmation({ order, detailsTo = `/pedidos/${order.orderId}` }) {
   const hasShipping = order.shippingAmount != null;
   return (
     <div className="mx-auto max-w-lg text-center">
@@ -51,7 +52,7 @@ export default function OrderConfirmation({ order }) {
       </div>
 
       <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-        <Button as={Link} to={`/pedidos/${order.orderId}`} variant="secondary">
+        <Button as={Link} to={detailsTo} variant="secondary">
           Ver detalhes do pedido
         </Button>
         <Button as={Link} to="/produtos">

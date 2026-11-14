@@ -72,9 +72,10 @@ function App() {
           <Route path="/carrinho" element={<Carrinho />} />
           <Route path="/acompanhar-pedido" element={<AcompanharPedido />} />
           <Route path="/acompanhar-pedido/:token" element={<PedidosPorLink />} />
+          {/* Públicas: quem não tem conta compra sem cadastro. */}
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/checkout/retorno" element={<CheckoutRetorno />} />
           <Route element={<ProtectedRoute />}>
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/checkout/retorno" element={<CheckoutRetorno />} />
             <Route path="/conta" element={<Conta />} />
             <Route path="/pedidos" element={<Pedidos />} />
             <Route path="/pedidos/:id" element={<PedidoDetalhe />} />

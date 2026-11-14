@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link, useSearchParams } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
 import Spinner from '@/components/ui/Spinner';
 import OrderConfirmation from '@/components/checkout/OrderConfirmation';
-import { fetchCart } from '@/features/cart/cartSlice';
+import { fetchCart, loadGuestCart } from '@/features/cart/cartSlice';
+import { selectAuth } from '@/features/auth/authSlice';
 import { fetchOrderById, startMercadoPagoPayment } from '@/services/orderService';
+import { fetchOrdersByAccessToken } from '@/services/publicOrderService';
+import { startGuestPayment } from '@/services/guestCheckoutService';
+import { guestOrderToken } from '@/lib/guestOrders';
+import { removeGuestCartVariants } from '@/lib/guestCart';
 import { goToExternal } from '@/lib/navigate';
 import { money, track } from '@/lib/pixel';
 
@@ -63,17 +68,32 @@ function trackPurchaseOnce(order) {
   );
 }
 
+/** Pedido sem cadastro: consulta pelo link "Meus pedidos" guardado ao criar o pedido. */
+async function fetchGuestOrder(orderId, token) {
+  const { orders = [] } = await fetchOrdersByAccessToken(token);
+  const found = orders.find((o) => String(o.orderId) === String(orderId));
+  if (!found) throw new Error('Pedido não encontrado');
+  return found;
+}
+
 /*
  * Tela de volta do Checkout Pro (back_urls). O Mercado Pago pode anexar
  * parâmetros como status/payment_id na URL — NUNCA confiamos neles: a única
  * fonte da verdade é o nosso backend (GET /api/orders/{id}), que só reflete
  * a aprovação depois que o webhook processa. Por isso esta tela consulta em
  * polling em vez de ler o resultado da query string.
+ *
+ * Pública: quem comprou sem cadastro é consultado pelo token do link "Meus
+ * pedidos" que o checkout guardou neste navegador (lib/guestOrders).
  */
 export default function CheckoutRetorno() {
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('orderId');
   const dispatch = useDispatch();
+  const authStatus = useSelector(selectAuth).status;
+  const authResolved = authStatus !== 'idle' && authStatus !== 'loading';
+  const isGuest = authStatus === 'anonymous';
+  const guestToken = isGuest ? guestOrderToken(orderId) : null;
 
   // loading | waiting | approved | rejected | cancelled | timeout | error
   const [phase, setPhase] = useState(orderId ? 'loading' : 'error');
@@ -83,14 +103,23 @@ export default function CheckoutRetorno() {
   const pollsRef = useRef(0);
 
   useEffect(() => {
-    if (!orderId) return; // phase já nasceu 'error' (estado inicial)
+    if (!orderId || !authResolved) return; // sem orderId, phase já nasceu 'error'
 
     let alive = true;
     let timer;
+    if (isGuest && !guestToken) {
+      // Pedido sem cadastro feito em outro navegador (ou armazenamento limpo).
+      Promise.resolve().then(() => alive && setPhase('error'));
+      return () => {
+        alive = false;
+      };
+    }
 
     const check = async () => {
       try {
-        const dto = await fetchOrderById(orderId);
+        const dto = isGuest
+          ? await fetchGuestOrder(orderId, guestToken)
+          : await fetchOrderById(orderId);
         if (!alive) return;
         setOrder(dto);
 
@@ -101,7 +130,13 @@ export default function CheckoutRetorno() {
         }
         if (dto.paymentStatus === 'APPROVED') {
           setPhase('approved');
-          dispatch(fetchCart()); // o backend já esvaziou o carrinho ao aprovar
+          if (isGuest) {
+            // Carrinho deste navegador: sai só o que foi pago.
+            removeGuestCartVariants((dto.orderItems || []).map((item) => item.variantId));
+            dispatch(loadGuestCart());
+          } else {
+            dispatch(fetchCart()); // o backend já esvaziou o carrinho ao aprovar
+          }
           return;
         }
         if (dto.paymentStatus === 'REJECTED') {
@@ -126,7 +161,7 @@ export default function CheckoutRetorno() {
       alive = false;
       clearTimeout(timer);
     };
-  }, [orderId, dispatch]);
+  }, [orderId, dispatch, authResolved, isGuest, guestToken]);
 
   useEffect(() => {
     if (phase === 'approved' && order) trackPurchaseOnce(order);
@@ -136,13 +171,24 @@ export default function CheckoutRetorno() {
     setRetrying(true);
     setRetryError(null);
     try {
-      const { initPoint } = await startMercadoPagoPayment(orderId);
+      const { initPoint } = isGuest
+        ? await startGuestPayment(orderId, guestToken)
+        : await startMercadoPagoPayment(orderId);
       goToExternal(initPoint);
     } catch {
       setRetryError('Não foi possível iniciar um novo pagamento. Tente novamente em instantes.');
       setRetrying(false);
     }
   };
+
+  // Onde ver o pedido: área logada, ou o link "Meus pedidos" de quem não tem conta.
+  const orderLink = isGuest
+    ? guestToken
+      ? `/acompanhar-pedido/${guestToken}`
+      : '/acompanhar-pedido'
+    : order
+      ? `/pedidos/${order.orderId}`
+      : '/pedidos';
 
   if (phase === 'loading' || phase === 'waiting') {
     return (
@@ -162,7 +208,12 @@ export default function CheckoutRetorno() {
   if (phase === 'approved') {
     return (
       <Container className="py-10 lg:py-14">
-        <OrderConfirmation order={order} />
+        <OrderConfirmation order={order} detailsTo={orderLink} />
+        {isGuest && (
+          <p className="mt-4 text-center text-sm text-muted">
+            Enviamos a confirmação para o seu e-mail, com o link para acompanhar o pedido.
+          </p>
+        )}
       </Container>
     );
   }
@@ -207,7 +258,7 @@ export default function CheckoutRetorno() {
             <Button as={Link} to="/carrinho">
               Ir para o carrinho
             </Button>
-            <Button as={Link} to={`/pedidos/${order.orderId}`} variant="secondary">
+            <Button as={Link} to={orderLink} variant="secondary">
               Ver o pedido
             </Button>
           </div>
@@ -225,7 +276,7 @@ export default function CheckoutRetorno() {
             Está demorando mais que o esperado para confirmar. Isso pode acontecer com boleto ou Pix
             pendente — você pode acompanhar o status a qualquer momento em Meus Pedidos.
           </p>
-          <Button as={Link} to={order ? `/pedidos/${order.orderId}` : '/pedidos'} className="mt-6">
+          <Button as={Link} to={orderLink} className="mt-6">
             Ver meus pedidos
           </Button>
         </div>
@@ -239,10 +290,12 @@ export default function CheckoutRetorno() {
       <div className="mx-auto max-w-md text-center">
         <p className="font-display text-2xl text-foreground">Não encontramos esse pedido</p>
         <p className="mt-2 text-sm text-muted">
-          Se você concluiu um pagamento, confira o resultado em Meus Pedidos.
+          {isGuest
+            ? 'Se você concluiu um pagamento, a confirmação chega no seu e-mail. Você também pode pedir o link dos seus pedidos em Acompanhar pedido.'
+            : 'Se você concluiu um pagamento, confira o resultado em Meus Pedidos.'}
         </p>
-        <Button as={Link} to="/pedidos" className="mt-6">
-          Ver meus pedidos
+        <Button as={Link} to={isGuest ? '/acompanhar-pedido' : '/pedidos'} className="mt-6">
+          {isGuest ? 'Acompanhar pedido' : 'Ver meus pedidos'}
         </Button>
       </div>
     </Container>

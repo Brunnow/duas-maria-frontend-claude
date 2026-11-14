@@ -3,7 +3,8 @@ import { addressLines } from '@/lib/address';
 import { formatShipping, shippingOptionLabel } from '@/lib/shipping';
 import OptimizedImage from '@/components/shared/OptimizedImage';
 
-export default function OrderReview({ items, address, shipping, coupons = [] }) {
+/** `email`: só no checkout sem cadastro — para onde vão a confirmação e o link do pedido. */
+export default function OrderReview({ items, address, shipping, coupons = [], email }) {
   const productsTotal = items.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
   const count = items.reduce((n, item) => n + (item.quantity || 0), 0);
   const shippingAmount = Number(shipping?.price) || 0;
@@ -53,6 +54,18 @@ export default function OrderReview({ items, address, shipping, coupons = [] }) 
             <p className="mt-1 text-danger">Endereço não selecionado</p>
           )}
         </div>
+
+        {email && (
+          <div className="mt-4 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
+              Confirmação por e-mail
+            </p>
+            <p className="mt-1 text-muted">
+              Enviaremos a confirmação e o link para acompanhar o pedido para{' '}
+              <span className="font-medium text-foreground">{email}</span>. Confira se está certo.
+            </p>
+          </div>
+        )}
 
         <div className="mt-4 text-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-foreground">

@@ -141,8 +141,8 @@ export default function Produto() {
 
   const handleAdd = async () => {
     if (!selectedVariant || !selectedVariant.inStock) return;
-    // Sem login a peça entra no carrinho do navegador; o login só é pedido
-    // no checkout. `item` é o que o carrinho do visitante mostra.
+    // Sem login a peça entra no carrinho do navegador (dá para comprar sem
+    // cadastro). `item` é o que o carrinho do visitante mostra.
     setAdding(true);
     setFeedback(null);
     // Mesmo preço que a página mostra e o carrinho guarda (Price/isOnSale):

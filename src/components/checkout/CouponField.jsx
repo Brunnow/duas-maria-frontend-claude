@@ -15,8 +15,9 @@ export const MAX_COUPONS = 2;
  *
  * `value` = [{ code, discountAmount }] (cupons já aplicados, em ordem).
  * `onApply(lista)` recebe a lista completa; `onRemove(code)` tira um.
+ * `validate(code, appliedCodes)` troca a validação (checkout sem cadastro).
  */
-export default function CouponField({ value = [], onApply, onRemove }) {
+export default function CouponField({ value = [], onApply, onRemove, validate = validateCoupon }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -31,7 +32,7 @@ export default function CouponField({ value = [], onApply, onRemove }) {
     setBusy(true);
     setError(null);
     try {
-      const preview = await validateCoupon(
+      const preview = await validate(
         trimmed,
         applied.map((c) => c.code),
       );

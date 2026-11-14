@@ -65,3 +65,10 @@ export function guestStockMessage(item) {
     ? `${name}: só temos 1 unidade.`
     : `${name}: só temos ${item.stock} unidades.`;
 }
+
+/** Tira do carrinho deste navegador só as peças de um pedido pago (o resto continua lá). */
+export function removeGuestCartVariants(variantIds) {
+  const paid = new Set(variantIds.filter((id) => id != null).map(String));
+  if (paid.size === 0) return;
+  writeGuestCart(readGuestCart().filter((item) => !paid.has(String(item.variantId))));
+}

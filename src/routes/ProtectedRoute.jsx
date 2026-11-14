@@ -9,9 +9,9 @@ import { selectAuth } from '@/features/auth/authSlice';
  * estado de carregamento (evita "piscar" a tela de login). Sem sessao,
  * redireciona para /login guardando a rota pretendida em state.from.
  */
-const LOGIN_MESSAGES = {
-  '/checkout': 'Entre ou crie sua conta para finalizar a compra. Seu carrinho fica guardado.',
-};
+// Mensagem na tela de login por rota pretendida (o /checkout ficou público:
+// quem não tem conta compra sem cadastro).
+const LOGIN_MESSAGES = {};
 
 export default function ProtectedRoute() {
   const { status } = useSelector(selectAuth);
