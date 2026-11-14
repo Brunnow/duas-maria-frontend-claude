@@ -46,6 +46,16 @@ describe('AdminPedidos', () => {
     expect(screen.getByText(/R\$\s*199,90/)).toBeInTheDocument();
   });
 
+  it('pedido sem cadastro ganha o selo Visitante', async () => {
+    adminOrderService.listOrders.mockResolvedValue(
+      page([row, { ...row, orderId: 78, guest: true }]),
+    );
+    renderWithProviders(<AdminPedidos />, { preloadedState: adminAuth });
+
+    expect(await screen.findByText('Pedido #78')).toBeInTheDocument();
+    expect(screen.getAllByText('Visitante')).toHaveLength(1);
+  });
+
   it('aplica o filtro de status na chamada da API', async () => {
     adminOrderService.listOrders.mockResolvedValue(page([row]));
     renderWithProviders(<AdminPedidos />, { preloadedState: adminAuth });

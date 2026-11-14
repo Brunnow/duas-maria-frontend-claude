@@ -59,6 +59,22 @@ export function createGuestOrder({
   return api.post('/public/checkout/orders', body).then((response) => response.data);
 }
 
+/*
+ * "Checkout iniciado": nome, e-mail e WhatsApp (+ carrinho) assim que a pessoa
+ * preenche, para o admin ver quem desistiu. Mesmo leadKey = mesma linha.
+ *   POST /api/public/checkout/leads -> 204
+ */
+export function recordCheckoutLead({ leadKey, name, email, phone, items, website = '' }) {
+  return api.post('/public/checkout/leads', {
+    leadKey,
+    name,
+    email,
+    phone,
+    items: toItems(items),
+    website,
+  });
+}
+
 export function startGuestPayment(orderId, token) {
   return api
     .post(`/public/checkout/orders/${encodeURIComponent(orderId)}/payment`, { token })

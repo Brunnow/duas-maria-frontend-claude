@@ -130,7 +130,10 @@ export default function AdminPedidos() {
                   className="flex items-center justify-between gap-4 py-4 hover:bg-subtle"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground">Pedido #{order.orderId}</p>
+                    <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      Pedido #{order.orderId}
+                      {order.guest && <Badge tone="neutral">Visitante</Badge>}
+                    </p>
                     <p className="text-xs text-muted">
                       {formatDateTime(order.createdAt)} · {order.customerName || order.email}
                       {order.city && order.state && (

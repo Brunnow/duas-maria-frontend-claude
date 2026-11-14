@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
@@ -13,16 +13,20 @@ import { useFetch } from '@/hooks/useFetch';
 import { goToExternal } from '@/lib/navigate';
 import { track } from '@/lib/pixel';
 import { pixelCartParams, useInitiateCheckout } from '@/lib/checkoutPixel';
-import { checkoutAttemptKey, rememberGuestOrder } from '@/lib/guestOrders';
+import { checkoutAttemptKey, checkoutLeadKey, rememberGuestOrder } from '@/lib/guestOrders';
 import {
   createGuestOrder,
   getGuestShippingOptions,
+  recordCheckoutLead,
   startGuestPayment,
   validateGuestCoupon,
 } from '@/services/guestCheckoutService';
 
 const STEPS = ['Seus dados', 'Frete', 'Revisão'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/;
+// Espera a pessoa parar de digitar antes de registrar o "checkout iniciado".
+const LEAD_DELAY_MS = 1500;
 
 /** Mensagem do backend, ou a genérica; 429 = muitas tentativas. */
 function apiMessage(err, fallback) {
@@ -55,6 +59,33 @@ export default function GuestCheckout({ items, cartReady }) {
   const [pendingOrder, setPendingOrder] = useState(null); // { orderId, token }
 
   useInitiateCheckout(cartReady, items);
+
+  // "Checkout iniciado": com nome, e-mail e WhatsApp válidos, registra (uma
+  // vez por combinação) para o admin ver quem desistiu — é o que o aviso
+  // abaixo do e-mail explica. Falha de rede aqui nunca atrapalha a compra.
+  const [contact, setContact] = useState({ name: '', phone: '' });
+  const handleValuesChange = useCallback(
+    (values) => setContact({ name: values.recipientName, phone: values.phone }),
+    [],
+  );
+  const lastLeadRef = useRef(null);
+  useEffect(() => {
+    const name = contact.name.trim();
+    const phone = contact.phone.trim();
+    const mail = email.trim();
+    if (!name || !PHONE_RE.test(phone) || !EMAIL_RE.test(mail) || website) return undefined;
+    const signature = `${name}|${mail.toLowerCase()}|${phone}`;
+    if (lastLeadRef.current === signature) return undefined;
+    const timer = setTimeout(() => {
+      lastLeadRef.current = signature;
+      recordCheckoutLead({ leadKey: checkoutLeadKey(), name, email: mail, phone, items }).catch(
+        () => {
+          lastLeadRef.current = null; // tenta de novo na próxima mudança
+        },
+      );
+    }, LEAD_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [contact, email, website, items]);
 
   const cep = address?.pincode || null;
   const uf = address?.state || null;
@@ -200,6 +231,7 @@ export default function GuestCheckout({ items, cartReady }) {
             submitLabel="Continuar"
             phoneLabel="WhatsApp"
             validateExtra={validateEmail}
+            onValuesChange={handleValuesChange}
             onSubmit={(values) => {
               setAddress(values);
               setStep(1);

@@ -9,6 +9,7 @@ vi.mock('@/services/guestCheckoutService', () => ({
   validateGuestCoupon: vi.fn(),
   createGuestOrder: vi.fn(),
   startGuestPayment: vi.fn(),
+  recordCheckoutLead: vi.fn(() => Promise.resolve()),
 }));
 vi.mock('@/services/viaCep', () => ({
   lookupCep: vi.fn(() => Promise.reject({ kind: 'notFound' })),
@@ -18,6 +19,7 @@ vi.mock('@/lib/pixel', async (importOriginal) => ({ ...(await importOriginal()),
 
 import {
   createGuestOrder,
+  recordCheckoutLead,
   getGuestShippingOptions,
   startGuestPayment,
   validateGuestCoupon,
@@ -206,5 +208,23 @@ describe('Checkout sem cadastro', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ir para o pagamento' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Este cupom já foi usado');
     expect(goToExternal).not.toHaveBeenCalled();
+  });
+  it('registra o checkout iniciado assim que nome, e-mail e WhatsApp estão preenchidos', async () => {
+    renderGuestCheckout();
+    type('E-mail', 'maria@exemplo.com');
+    type('Nome de quem vai receber', 'Maria da Silva');
+    expect(recordCheckoutLead).not.toHaveBeenCalled();
+    type('WhatsApp', '(81) 91234-5678');
+
+    await waitFor(() => expect(recordCheckoutLead).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    expect(recordCheckoutLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Maria da Silva',
+        email: 'maria@exemplo.com',
+        phone: '(81) 91234-5678',
+        items: [ITEM],
+      }),
+    );
+    expect(recordCheckoutLead.mock.calls[0][0].leadKey).toMatch(/^[A-Za-z0-9-]{16,64}$/);
   });
 });

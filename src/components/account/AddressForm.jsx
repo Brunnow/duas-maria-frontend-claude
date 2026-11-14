@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
@@ -61,11 +61,17 @@ export default function AddressForm({
   phoneLabel = 'Telefone',
   leading = null,
   validateExtra,
+  onValuesChange,
 }) {
   const [values, setValues] = useState(() => ({ ...EMPTY, ...pickFields(initial) }));
   const [errors, setErrors] = useState({});
   const [cepStatus, setCepStatus] = useState(null); // null | 'loading' | 'notFound' | 'network'
   const lastCep = useRef('');
+
+  // Checkout sem cadastro: acompanha nome/WhatsApp enquanto a pessoa digita.
+  useEffect(() => {
+    onValuesChange?.(values);
+  }, [values, onValuesChange]);
 
   const setField = (name, value) => {
     setValues((prev) => ({ ...prev, [name]: value }));

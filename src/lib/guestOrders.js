@@ -45,6 +45,21 @@ function randomId() {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+const LEAD_KEY = 'dm-checkout-lead';
+
+/** Id aleatório do "checkout iniciado" desta aba: o mesmo enquanto ela estiver aberta. */
+export function checkoutLeadKey() {
+  try {
+    const saved = window.sessionStorage.getItem(LEAD_KEY);
+    if (saved) return saved;
+    const key = randomId();
+    window.sessionStorage.setItem(LEAD_KEY, key);
+    return key;
+  } catch {
+    return randomId();
+  }
+}
+
 /**
  * idempotencyKey do pedido: o mesmo enquanto o conteúdo do pedido
  * (`fingerprint`) não muda; mudou carrinho, endereço, frete ou cupom = id novo.
