@@ -76,3 +76,16 @@
     -moz-osx-font-smoothing: grayscale;
   }
 }
+
+/*
+ * O Safari do iPhone dá zoom na página ao focar um campo com letra menor que
+ * 16px. No celular todo campo de texto fica com 16px; do tablet para cima vale
+ * o tamanho da classe (text-sm). Fora de @layer para vencer os utilitários.
+ */
+@media (max-width: 639.98px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
